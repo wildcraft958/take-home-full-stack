@@ -3,10 +3,14 @@ API Routers
 
 Create your route handlers in separate files:
 - rooms.py - Room-related endpoints
-- bookings.py - Booking-related endpoints
+- bookings.py - Booking-related endpoints (including AI parsing)
+
+See the schemas/__init__.py for request/response models.
+See the services/ai_parser.py for natural language parsing.
+
 
 Example rooms.py:
-
+-----------------
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
@@ -20,8 +24,7 @@ router = APIRouter()
 
 @router.get("/", response_model=List[RoomResponse])
 def get_rooms(db: Session = Depends(get_db)):
-    rooms = db.query(Room).all()
-    return rooms
+    return db.query(Room).all()
 
 
 @router.get("/{room_id}", response_model=RoomResponse)
@@ -33,8 +36,8 @@ def get_room(room_id: int, db: Session = Depends(get_db)):
 
 
 Example bookings.py:
-
-from fastapi import APIRouter, Depends, HTTPException, Query
+--------------------
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from typing import List, Optional
@@ -42,14 +45,19 @@ from datetime import date
 
 from app.database import get_db
 from app.models import Booking, Room
-from app.schemas import BookingCreate, BookingResponse, BookingWithRoom
+from app.schemas import (
+    BookingCreate, BookingResponse,
+    ParseBookingRequest, ParsedBookingResponse
+)
+from app.services.ai_parser import AIBookingParser
 
 router = APIRouter()
+ai_parser = AIBookingParser()
 
 
 def check_booking_conflict(db: Session, room_id: int, booking_date: date,
-                           start_time, end_time, exclude_booking_id: int = None):
-    '''Check if there's a conflicting booking for the same room and time.'''
+                           start_time, end_time, exclude_id: int = None):
+    '''Check if there's a conflicting booking.'''
     query = db.query(Booking).filter(
         and_(
             Booking.room_id == room_id,
@@ -58,14 +66,14 @@ def check_booking_conflict(db: Session, room_id: int, booking_date: date,
             Booking.end_time > start_time
         )
     )
-    if exclude_booking_id:
-        query = query.filter(Booking.id != exclude_booking_id)
+    if exclude_id:
+        query = query.filter(Booking.id != exclude_id)
     return query.first()
 
 
 @router.post("/", response_model=BookingResponse, status_code=201)
 def create_booking(booking: BookingCreate, db: Session = Depends(get_db)):
-    # Check if room exists
+    # Check room exists
     room = db.query(Room).filter(Room.id == booking.room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -76,12 +84,8 @@ def create_booking(booking: BookingCreate, db: Session = Depends(get_db)):
         booking.start_time, booking.end_time
     )
     if conflict:
-        raise HTTPException(
-            status_code=409,
-            detail="Room is already booked for this time slot"
-        )
+        raise HTTPException(status_code=409, detail="Room already booked for this time")
 
-    # Create booking
     db_booking = Booking(**booking.model_dump())
     db.add(db_booking)
     db.commit()
@@ -89,10 +93,25 @@ def create_booking(booking: BookingCreate, db: Session = Depends(get_db)):
     return db_booking
 
 
-@router.get("/", response_model=List[BookingWithRoom])
+@router.post("/parse", response_model=ParsedBookingResponse)
+async def parse_natural_language(
+    request: ParseBookingRequest,
+    db: Session = Depends(get_db)
+):
+    '''Parse natural language booking request into structured data.'''
+    # Get available rooms for context
+    rooms = db.query(Room).all()
+    room_info = [{"name": r.name, "capacity": r.capacity} for r in rooms]
+
+    # Parse using AI service
+    result = await ai_parser.parse(request.text, room_info)
+    return result
+
+
+@router.get("/", response_model=List[BookingResponse])
 def get_bookings(
-    room_id: Optional[int] = Query(None),
-    booking_date: Optional[date] = Query(None),
+    room_id: Optional[int] = None,
+    booking_date: Optional[date] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Booking)
@@ -110,7 +129,6 @@ def delete_booking(booking_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Booking not found")
     db.delete(booking)
     db.commit()
-    return None
 """
 
-# TODO: Create rooms.py and bookings.py files with your route handlers
+# TODO: Create rooms.py and bookings.py with your implementations

@@ -27,6 +27,10 @@ services:
     environment:
       DATABASE_URL: postgresql://booking_user:booking_pass@database:5432/booking_db
       PYTHONUNBUFFERED: 1
+      # AI Provider Configuration (candidate configures one of these)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
     ports:
       - "8000:8000"
     volumes:

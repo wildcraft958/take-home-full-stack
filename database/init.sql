@@ -28,9 +28,10 @@ INSERT INTO rooms (name, capacity, amenities) VALUES
     ('Training Room', 30, ARRAY['projector', 'whiteboard', 'microphone', 'video_conferencing']);
 
 -- ============================================
--- BOOKINGS TABLE (candidate implements)
+-- BOOKINGS TABLE
 -- ============================================
--- Uncomment and modify as needed, or create via SQLAlchemy models
+-- Candidate should create this table via SQLAlchemy models
+-- or uncomment and modify this SQL
 
 /*
 CREATE TABLE IF NOT EXISTS bookings (
@@ -47,19 +48,49 @@ CREATE TABLE IF NOT EXISTS bookings (
     CONSTRAINT valid_time_range CHECK (end_time > start_time)
 );
 
--- Index for efficient conflict checking
-CREATE INDEX idx_bookings_room_date ON bookings(room_id, booking_date);
+-- Index for efficient conflict checking queries
+CREATE INDEX IF NOT EXISTS idx_bookings_room_date
+    ON bookings(room_id, booking_date);
+
+-- Index for filtering by date
+CREATE INDEX IF NOT EXISTS idx_bookings_date
+    ON bookings(booking_date);
 */
 
 -- ============================================
--- SAMPLE BOOKINGS (optional - for testing)
+-- SAMPLE BOOKINGS (for testing - optional)
 -- ============================================
--- Uncomment to add sample bookings for testing
+-- Uncomment to add sample bookings after creating the bookings table
 
 /*
 INSERT INTO bookings (room_id, title, booked_by, booking_date, start_time, end_time) VALUES
     (1, 'Team Standup', 'alice@example.com', CURRENT_DATE, '09:00', '09:30'),
     (1, 'Project Review', 'bob@example.com', CURRENT_DATE, '14:00', '15:00'),
     (2, 'Client Call', 'carol@example.com', CURRENT_DATE, '10:00', '11:00'),
-    (5, 'Board Meeting', 'david@example.com', CURRENT_DATE + 1, '09:00', '12:00');
+    (5, 'Board Meeting', 'david@example.com', CURRENT_DATE + 1, '09:00', '12:00'),
+    (3, 'Quick Sync', 'eve@example.com', CURRENT_DATE, '15:30', '16:00');
 */
+
+-- ============================================
+-- USEFUL QUERIES (for reference)
+-- ============================================
+
+-- Check for booking conflicts:
+-- SELECT * FROM bookings
+-- WHERE room_id = $1
+--   AND booking_date = $2
+--   AND start_time < $4  -- new end time
+--   AND end_time > $3;   -- new start time
+
+-- Get all bookings for a room on a date:
+-- SELECT b.*, r.name as room_name
+-- FROM bookings b
+-- JOIN rooms r ON b.room_id = r.id
+-- WHERE b.room_id = $1 AND b.booking_date = $2
+-- ORDER BY b.start_time;
+
+-- Get room availability for a date:
+-- SELECT r.*,
+--   (SELECT COUNT(*) FROM bookings b
+--    WHERE b.room_id = r.id AND b.booking_date = $1) as booking_count
+-- FROM rooms r;

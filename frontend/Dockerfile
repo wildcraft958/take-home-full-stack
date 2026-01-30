@@ -3,13 +3,13 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dependencies
-COPY package.json package-lock.json* ./
+COPY package.json .
 RUN npm install
 
-# Copy application code
+# Copy source files
 COPY . .
 
-# Expose port
+# Expose Vite dev server port
 EXPOSE 5173
 
 # Start development server

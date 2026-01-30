@@ -2,7 +2,9 @@
 
 ## Overview
 
-Build a **meeting room booking system** that allows users to view available rooms and create, view, and cancel reservations. The application consists of a React frontend, FastAPI backend, and PostgreSQL database—all running in Docker.
+Build a **meeting room booking system** with **AI-powered natural language booking**. Users can either fill out a traditional form OR type requests like *"Book Conference Room A for tomorrow at 2pm for 1 hour"* and have the system parse it automatically.
+
+The application consists of a React frontend, FastAPI backend, and PostgreSQL database—all running in Docker.
 
 **Estimated Time:** 4-6 hours
 
@@ -13,12 +15,17 @@ Build a **meeting room booking system** that allows users to view available room
 ### Prerequisites
 - Docker and Docker Compose installed
 - Git (for version control)
+- API key for an LLM provider (OpenAI, Anthropic, or other)
 
-### Running the Application
+### Setup
 
 ```bash
 # Clone or extract the project
 cd take-home-full-stack
+
+# Copy environment file and add your API key
+cp .env.example .env
+# Edit .env and add your AI provider API key
 
 # Start all services
 docker-compose up --build
@@ -41,45 +48,120 @@ The project is configured with hot-reloading:
 
 ### Core Features (Required)
 
-You must implement the following features:
-
 #### 1. View Available Rooms
 - Display a list of all meeting rooms
 - Show room name, capacity, and amenities for each room
 - Rooms are pre-seeded in the database
 
-#### 2. Create a Booking
+#### 2. Create a Booking (Traditional Form)
 - Users can book a room for a specific date and time
 - Required fields: room, date, start time, end time, booked by (name/email)
 - Optional: booking title/purpose
 - Validate that end time is after start time
 - **Prevent double-booking:** Cannot book a room that's already reserved for overlapping times
 
-#### 3. View Bookings
+#### 3. 🤖 Natural Language Booking (AI Feature)
+- Users can type booking requests in natural language
+- Examples of inputs to support:
+  - *"Book Conference Room A tomorrow from 2pm to 3pm for John"*
+  - *"I need a room for 6 people next Monday morning"*
+  - *"Reserve the Board Room for a 2-hour meeting on Friday at 10am"*
+- The system should:
+  - Parse the request using an LLM of your choice
+  - Extract: room (or room requirements), date, time, duration, booker name
+  - Show the parsed result for user confirmation before booking
+  - Handle ambiguous requests gracefully (ask for clarification or show options)
+  - Fallback to manual form if parsing fails
+
+#### 4. View Bookings
 - Display all bookings with relevant details
 - Show: room name, date, time slot, who booked it
 - Filter bookings by date OR by room (implement at least one filter)
 
-#### 4. Cancel a Booking
+#### 5. Cancel a Booking
 - Users can cancel/delete an existing booking
 - Show confirmation before deletion
 
-#### 5. Conflict Detection
+#### 6. Conflict Detection
 - When creating a booking, check for time conflicts
-- Display a clear error message if the room is already booked for the requested time
-- A conflict occurs when: `existing_start < new_end AND existing_end > new_start` (for the same room and date)
+- Display a clear error message if the room is already booked
+- A conflict occurs when: `existing_start < new_end AND existing_end > new_start` (same room and date)
 
 ### Bonus Features (Optional)
 
-Implement any of these for extra credit:
-
+- [ ] Smart room suggestions (AI recommends best room based on requirements)
 - [ ] Edit existing bookings (with conflict re-validation)
-- [ ] Filter/search rooms by capacity or amenities
-- [ ] View a room's availability calendar for a specific date
-- [ ] Recurring bookings (daily/weekly)
-- [ ] Responsive mobile-friendly design
-- [ ] Unit tests for backend API
-- [ ] Frontend component tests
+- [ ] Handle relative dates intelligently ("next Tuesday", "in 3 days")
+- [ ] Support for recurring bookings via natural language
+- [ ] Unit tests for AI parsing logic
+- [ ] Graceful degradation when AI service is unavailable
+
+---
+
+## AI Implementation Guidelines
+
+### Provider Flexibility
+You may use **any LLM provider** of your choice:
+- OpenAI (GPT-4, GPT-3.5)
+- Anthropic (Claude)
+- Google (Gemini)
+- Local models (Ollama, llama.cpp)
+- Other providers
+
+### What We're Evaluating
+
+| Aspect | What We Look For |
+|--------|------------------|
+| **Prompt Engineering** | Clear, effective prompts that reliably extract structured data |
+| **Output Parsing** | Robust handling of LLM responses, including edge cases |
+| **Error Handling** | Graceful fallbacks when AI fails or returns unexpected results |
+| **User Experience** | Clear feedback during AI processing; confirmation before booking |
+| **Code Organization** | AI logic separated into services; easy to swap providers |
+
+### Suggested Approach
+
+```
+User Input: "Book room A tomorrow 2-3pm for Alice"
+     ↓
+[AI Service] Parse natural language
+     ↓
+Extracted Data: {
+  room: "Conference Room A",
+  date: "2025-01-31",
+  start_time: "14:00",
+  end_time: "15:00",
+  booked_by: "Alice"
+}
+     ↓
+[Show Confirmation UI] "Book Conference Room A on Jan 31, 2-3 PM?"
+     ↓
+[User Confirms] → Create booking via standard API
+```
+
+### Example Prompt Structure (for reference)
+
+```
+You are a booking assistant. Parse the following room booking request and extract structured information.
+
+Available rooms: Conference Room A (10 people), Conference Room B (8 people), Meeting Room 1 (4 people), ...
+
+Today's date: {current_date}
+
+User request: "{user_input}"
+
+Extract and return JSON:
+{
+  "room_name": string or null,
+  "room_requirements": { "min_capacity": number } or null,
+  "date": "YYYY-MM-DD",
+  "start_time": "HH:MM",
+  "end_time": "HH:MM",
+  "booked_by": string,
+  "title": string or null,
+  "confidence": "high" | "medium" | "low",
+  "clarification_needed": string or null
+}
+```
 
 ---
 
@@ -87,10 +169,8 @@ Implement any of these for extra credit:
 
 ### Database Schema
 
-The following table is pre-created with seed data:
-
+**Provided (rooms table):**
 ```sql
--- Provided: rooms table
 CREATE TABLE rooms (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -100,10 +180,8 @@ CREATE TABLE rooms (
 );
 ```
 
-You need to create:
-
+**You implement (bookings table):**
 ```sql
--- You implement: bookings table
 CREATE TABLE bookings (
     id SERIAL PRIMARY KEY,
     room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
@@ -118,17 +196,14 @@ CREATE TABLE bookings (
 
 ### API Endpoints
 
-Design RESTful endpoints. Suggested structure:
-
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/rooms` | List all rooms |
 | GET | `/api/rooms/{id}` | Get room details |
 | GET | `/api/bookings` | List bookings (with optional filters) |
-| GET | `/api/bookings/{id}` | Get booking details |
-| POST | `/api/bookings` | Create a new booking |
+| POST | `/api/bookings` | Create a booking |
 | DELETE | `/api/bookings/{id}` | Cancel a booking |
-| PUT | `/api/bookings/{id}` | (Bonus) Update a booking |
+| **POST** | **`/api/bookings/parse`** | **Parse natural language → structured booking data** |
 
 ### Tech Stack
 
@@ -139,6 +214,7 @@ Design RESTful endpoints. Suggested structure:
 | Backend | Python 3.11+ with FastAPI |
 | ORM | SQLAlchemy (recommended) or raw SQL |
 | Database | PostgreSQL 15 |
+| AI | Any LLM provider (OpenAI, Anthropic, etc.) |
 | Containerization | Docker & Docker Compose |
 
 ---
@@ -147,35 +223,33 @@ Design RESTful endpoints. Suggested structure:
 
 ```
 room-booking-assessment/
-├── docker-compose.yml          # Orchestrates all services
-├── README.md                   # This file
+├── docker-compose.yml
+├── .env.example              # API key configuration
+├── README.md
 │
 ├── backend/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   └── app/
-│       ├── main.py             # FastAPI application entry point
-│       ├── database.py         # Database connection setup
-│       ├── models/             # SQLAlchemy models (you implement)
-│       ├── schemas/            # Pydantic schemas (you implement)
-│       └── routers/            # API route handlers (you implement)
+│       ├── main.py           # FastAPI application
+│       ├── database.py       # Database connection
+│       ├── models/           # SQLAlchemy models
+│       ├── schemas/          # Pydantic schemas
+│       ├── routers/          # API route handlers
+│       └── services/         # AI service + business logic
+│           └── ai_parser.py  # Natural language parsing (you implement)
 │
 ├── frontend/
 │   ├── Dockerfile
 │   ├── package.json
-│   ├── index.html
-│   ├── vite.config.ts
 │   └── src/
-│       ├── main.tsx            # React entry point
-│       ├── App.tsx             # Main app component (basic shell)
-│       ├── api/
-│       │   └── client.ts       # Axios instance (pre-configured)
-│       ├── components/         # Your React components
-│       └── types/
-│           └── index.ts        # TypeScript type definitions
+│       ├── App.tsx
+│       ├── api/client.ts     # Pre-configured API client
+│       ├── components/       # Your React components
+│       └── types/index.ts    # TypeScript definitions
 │
 └── database/
-    └── init.sql                # Initial schema + seed data
+    └── init.sql              # Schema + seed data
 ```
 
 ---
@@ -184,19 +258,12 @@ room-booking-assessment/
 
 | Category | Weight | What We're Looking For |
 |----------|--------|------------------------|
-| **Functionality** | 30% | All core features work correctly; edge cases handled |
-| **Code Quality** | 25% | Clean, readable, well-organized code; appropriate abstractions |
-| **API Design** | 20% | RESTful conventions; proper HTTP status codes; input validation |
-| **Frontend UX** | 15% | Intuitive interface; loading states; error handling; form validation |
-| **Docker/DevOps** | 10% | Application runs with single `docker-compose up`; no manual setup |
-
-### What We Value
-
-- **Working software** over perfect code—make it work first
-- **Clear code** over clever code—readability matters
-- **Practical solutions** over over-engineering
-- **Good error handling**—users should know what went wrong
-- **Consistent patterns**—pick an approach and stick with it
+| **Functionality** | 25% | All core features work correctly; edge cases handled |
+| **AI Integration** | 25% | Effective prompts; robust parsing; good UX for AI features |
+| **Code Quality** | 20% | Clean, readable, well-organized code; appropriate abstractions |
+| **API Design** | 15% | RESTful conventions; proper HTTP status codes; input validation |
+| **Frontend UX** | 10% | Intuitive interface; loading states; error handling |
+| **Docker/DevOps** | 5% | Application runs with single `docker-compose up` |
 
 ---
 
@@ -204,49 +271,56 @@ room-booking-assessment/
 
 ### Deliverables
 
-1. **Source Code**
-   - Push to a GitHub repository (preferred) OR
-   - Send as a zip file
+1. **Source Code** (GitHub repo or zip file)
 
-2. **Updated README** (add a section called "Candidate Notes")
-   - Any assumptions you made
+2. **Updated README** - Add a "Candidate Notes" section with:
+   - Which AI provider you used and why
+   - Your prompt engineering approach
+   - Any assumptions made
    - What you would improve with more time
    - Approximate time spent
-   - Any bonus features implemented
 
 ### Before Submitting
 
 - [ ] Run `docker-compose down -v && docker-compose up --build` to verify clean startup
-- [ ] Test all core features manually
-- [ ] Remove any console.log/print statements used for debugging
-- [ ] Ensure no hardcoded secrets or credentials
+- [ ] Test all core features including natural language booking
+- [ ] Test AI parsing with various input formats
+- [ ] Verify graceful handling when AI service is unavailable
+- [ ] Remove debug statements and hardcoded API keys
 
 ---
 
 ## Hints & Tips
 
-1. **Start with the database model**—define your bookings table first
-2. **Build the API next**—test with the Swagger docs at `/docs`
-3. **Frontend last**—connect to your working API
-4. **Time management:**
-   - Hour 1: Database + basic API endpoints
-   - Hour 2-3: Complete API with validation + conflict detection
-   - Hour 3-5: Frontend implementation
-   - Hour 5-6: Polish, testing, documentation
+### Time Management
+| Time | Focus |
+|------|-------|
+| Hour 1 | Database model + basic CRUD API |
+| Hour 2 | Complete API with conflict detection |
+| Hour 2-3 | AI parsing service + `/parse` endpoint |
+| Hour 3-5 | Frontend: forms, lists, NL input |
+| Hour 5-6 | Polish, error handling, documentation |
 
-5. **Conflict detection query hint:**
-   ```sql
-   SELECT * FROM bookings
-   WHERE room_id = :room_id
-     AND booking_date = :date
-     AND start_time < :end_time
-     AND end_time > :start_time;
-   ```
+### AI Parsing Tips
+1. **Start simple:** Get basic "Book Room X on Date at Time" working first
+2. **Use structured output:** Ask the LLM to return JSON for easier parsing
+3. **Include context:** Pass available room names to the LLM so it can match correctly
+4. **Handle uncertainty:** Use a "confidence" field; ask for confirmation on low confidence
+5. **Test edge cases:** "tomorrow", "next week", partial information, typos
+
+### Conflict Detection Query
+```sql
+SELECT * FROM bookings
+WHERE room_id = :room_id
+  AND booking_date = :date
+  AND start_time < :end_time
+  AND end_time > :start_time;
+```
 
 ---
 
 ## Questions?
 
-If you have questions about the requirements, please reach out to [HIRING_MANAGER_EMAIL]. We're happy to clarify—asking good questions is a positive signal!
+If you have questions about the requirements, please reach out to [HIRING_MANAGER_EMAIL]. Asking good questions is encouraged!
 
 Good luck! 🚀

@@ -1,11 +1,13 @@
 """
 Pydantic Schemas
 
-Define your request/response schemas here. Example:
+Define your request/response schemas here.
 
-from datetime import date, time, datetime
+Example schemas:
+
+from pydantic import BaseModel, Field
 from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator
+from datetime import date, time, datetime
 
 
 # ============ Room Schemas ============
@@ -13,7 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 class RoomBase(BaseModel):
     name: str
     capacity: int
-    amenities: Optional[List[str]] = []
+    amenities: List[str] = []
 
 
 class RoomResponse(RoomBase):
@@ -29,17 +31,10 @@ class RoomResponse(RoomBase):
 class BookingBase(BaseModel):
     room_id: int
     title: Optional[str] = None
-    booked_by: str = Field(..., min_length=1, max_length=100)
+    booked_by: str
     booking_date: date
     start_time: time
     end_time: time
-
-    @field_validator('end_time')
-    @classmethod
-    def end_time_after_start_time(cls, v, info):
-        if 'start_time' in info.data and v <= info.data['start_time']:
-            raise ValueError('end_time must be after start_time')
-        return v
 
 
 class BookingCreate(BookingBase):
@@ -56,7 +51,35 @@ class BookingResponse(BookingBase):
 
 class BookingWithRoom(BookingResponse):
     room: RoomResponse
+
+
+# ============ AI Parsing Schemas ============
+
+class ParseBookingRequest(BaseModel):
+    '''Request to parse natural language booking'''
+    text: str = Field(..., description="Natural language booking request")
+
+
+class ParsedBookingResponse(BaseModel):
+    '''Structured data extracted from natural language'''
+    room_name: Optional[str] = Field(None, description="Matched room name")
+    room_requirements: Optional[dict] = Field(None, description="Requirements like min_capacity")
+    date: Optional[str] = Field(None, description="Booking date (YYYY-MM-DD)")
+    start_time: Optional[str] = Field(None, description="Start time (HH:MM)")
+    end_time: Optional[str] = Field(None, description="End time (HH:MM)")
+    duration_minutes: Optional[int] = Field(None, description="Duration if end_time not specified")
+    booked_by: Optional[str] = Field(None, description="Person making the booking")
+    title: Optional[str] = Field(None, description="Meeting title/purpose")
+    confidence: str = Field("medium", description="Parsing confidence: high, medium, low")
+    clarification_needed: Optional[str] = Field(None, description="What info is missing")
+    raw_text: str = Field(..., description="Original input text")
+
+
+class ParseErrorResponse(BaseModel):
+    '''Error response when parsing fails'''
+    error: str
+    suggestion: str
+    raw_text: str
 """
 
 # TODO: Implement your schemas here
-# Hint: Uncomment and modify the example above

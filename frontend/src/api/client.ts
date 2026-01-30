@@ -1,76 +1,118 @@
-import axios from 'axios'
-
 /**
- * Pre-configured Axios instance for API calls
+ * API Client Configuration
  *
- * The base URL is set to work with the Docker setup.
- * All API endpoints are prefixed with /api
- *
- * Usage:
- *   import { api } from './api/client'
- *
- *   // GET request
- *   const rooms = await api.get('/api/rooms')
- *
- *   // POST request
- *   const newBooking = await api.post('/api/bookings', {
- *     room_id: 1,
- *     booking_date: '2024-01-15',
- *     start_time: '09:00',
- *     end_time: '10:00',
- *     booked_by: 'john@example.com'
- *   })
- *
- *   // DELETE request
- *   await api.delete('/api/bookings/1')
+ * Pre-configured Axios instance for communicating with the backend.
+ * The base URL is set via environment variable VITE_API_URL.
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import axios from 'axios'
 
+// Create axios instance with base configuration
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
+// Request interceptor (add auth tokens, logging, etc.)
+api.interceptors.request.use(
+  (config) => {
+    // TODO: Add auth token if needed
+    // const token = localStorage.getItem('token')
+    // if (token) {
+    //   config.headers.Authorization = `Bearer ${token}`
+    // }
+    return config
+  },
   (error) => {
-    // Extract error message from response
-    const message =
-      error.response?.data?.detail ||
-      error.response?.data?.message ||
-      error.message ||
-      'An unexpected error occurred'
-
-    // You can handle specific status codes here
-    if (error.response?.status === 409) {
-      // Conflict - likely a double-booking
-      console.error('Booking conflict:', message)
-    }
-
-    return Promise.reject(new Error(message))
+    return Promise.reject(error)
   }
 )
 
-// Type-safe API helper functions (optional, but recommended)
-// Uncomment and modify once you define your types
+// Response interceptor (handle errors globally)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle common errors
+    if (error.response) {
+      switch (error.response.status) {
+        case 409:
+          // Booking conflict
+          console.error('Booking conflict:', error.response.data.detail)
+          break
+        case 404:
+          console.error('Resource not found:', error.response.data.detail)
+          break
+        case 422:
+          console.error('Validation error:', error.response.data.detail)
+          break
+        default:
+          console.error('API error:', error.response.data)
+      }
+    } else if (error.request) {
+      console.error('Network error - no response received')
+    }
+    return Promise.reject(error)
+  }
+)
 
-/*
-import { Room, Booking, BookingCreate } from '../types'
+// =============================================================================
+// API Functions - Implement these as needed
+// =============================================================================
 
-export const roomsApi = {
-  getAll: () => api.get<Room[]>('/api/rooms'),
-  getById: (id: number) => api.get<Room>(`/api/rooms/${id}`),
+/**
+ * Fetch all rooms
+ * GET /api/rooms
+ */
+export const getRooms = async () => {
+  const response = await api.get('/api/rooms')
+  return response.data
 }
 
-export const bookingsApi = {
-  getAll: (params?: { room_id?: number; booking_date?: string }) =>
-    api.get<Booking[]>('/api/bookings', { params }),
-  getById: (id: number) => api.get<Booking>(`/api/bookings/${id}`),
-  create: (data: BookingCreate) => api.post<Booking>('/api/bookings', data),
-  delete: (id: number) => api.delete(`/api/bookings/${id}`),
+/**
+ * Fetch all bookings with optional filters
+ * GET /api/bookings?room_id=X&booking_date=YYYY-MM-DD
+ */
+export const getBookings = async (params?: {
+  room_id?: number
+  booking_date?: string
+}) => {
+  const response = await api.get('/api/bookings', { params })
+  return response.data
 }
-*/
+
+/**
+ * Create a new booking
+ * POST /api/bookings
+ */
+export const createBooking = async (booking: {
+  room_id: number
+  title?: string
+  booked_by: string
+  booking_date: string
+  start_time: string
+  end_time: string
+}) => {
+  const response = await api.post('/api/bookings', booking)
+  return response.data
+}
+
+/**
+ * Delete a booking
+ * DELETE /api/bookings/:id
+ */
+export const deleteBooking = async (id: number) => {
+  await api.delete(`/api/bookings/${id}`)
+}
+
+/**
+ * Parse natural language booking request using AI
+ * POST /api/bookings/parse
+ */
+export const parseBookingRequest = async (text: string) => {
+  const response = await api.post('/api/bookings/parse', { text })
+  return response.data
+}
+
+export default api

@@ -2,7 +2,10 @@
 #
 # Suggested components:
 # - RoomList.tsx - Display all rooms
-# - RoomCard.tsx - Individual room display
-# - BookingForm.tsx - Form to create bookings
-# - BookingList.tsx - Display all bookings with filters
+# - RoomCard.tsx - Individual room card
+# - BookingForm.tsx - Traditional booking form
+# - BookingList.tsx - Display bookings with filters
 # - BookingCard.tsx - Individual booking display
+# - NaturalLanguageInput.tsx - AI-powered natural language input
+# - ParsedBookingPreview.tsx - Preview/confirm parsed AI results
+# - ConfirmationDialog.tsx - Reusable confirmation modal
