@@ -1,0 +1,8 @@
+# Create your React components in this directory
+#
+# Suggested components:
+# - RoomList.tsx - Display all rooms
+# - RoomCard.tsx - Individual room display
+# - BookingForm.tsx - Form to create bookings
+# - BookingList.tsx - Display all bookings with filters
+# - BookingCard.tsx - Individual booking display
