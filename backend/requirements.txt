@@ -13,9 +13,10 @@ pydantic-settings==2.1.0
 # HTTP Client (for AI API calls)
 httpx==0.26.0
 
-# AI Providers (candidates can use any of these)
-openai==1.10.0
-anthropic==0.18.0
+# AI Orchestration
+langchain==0.1.0
+langchain-community==0.0.10
+langchain-openai==0.0.2
 
 # Utilities
 python-dotenv==1.0.0

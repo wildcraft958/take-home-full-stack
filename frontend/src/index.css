@@ -1,363 +1,94 @@
-/* Base Styles - Feel free to customize or replace with your preferred styling solution */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  line-height: 1.6;
-  color: #333;
-  background-color: #f5f5f5;
-}
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-}
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-/* Navigation */
-nav {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
 
-nav a {
-  color: #0066cc;
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-nav a:hover {
-  background-color: #e6f0ff;
-}
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-/* Cards */
-.card {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-/* Forms */
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
 
-label {
-  font-weight: 500;
-  color: #555;
-}
+    --radius: 0.5rem;
+  }
 
-input,
-select,
-textarea {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
+  /* Dark Theme (Default for this app per user request) */
+  :root {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: #0066cc;
-}
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
 
-/* Buttons */
-button {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-.btn-primary {
-  background-color: #0066cc;
-  color: white;
-}
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-.btn-primary:hover {
-  background-color: #0052a3;
-}
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-.btn-primary:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-.btn-secondary {
-  background-color: #6c757d;
-  color: white;
-}
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
-.btn-secondary:hover {
-  background-color: #5a6268;
-}
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-.btn-danger {
-  background-color: #dc3545;
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #c82333;
-}
-
-/* Natural Language Input - AI Feature */
-.nl-input-container {
-  position: relative;
-  margin-bottom: 2rem;
-}
-
-.nl-input {
-  width: 100%;
-  padding: 1rem;
-  font-size: 1.1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.nl-input:focus {
-  border-color: #0066cc;
-  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-}
-
-.nl-input::placeholder {
-  color: #999;
-}
-
-.ai-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.75rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-/* Parsed Result Preview */
-.parsed-preview {
-  background-color: #f8f9fa;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-top: 1rem;
-}
-
-.parsed-preview h4 {
-  margin-bottom: 0.5rem;
-  color: #555;
-}
-
-.parsed-field {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #eee;
-}
-
-.parsed-field:last-child {
-  border-bottom: none;
-}
-
-.parsed-field .label {
-  color: #666;
-}
-
-.parsed-field .value {
-  font-weight: 500;
-}
-
-.confidence-badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.confidence-high {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.confidence-medium {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.confidence-low {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-/* Room Cards */
-.room-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-}
-
-.room-card {
-  background: white;
-  border-radius: 8px;
-  padding: 1.25rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.room-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.room-name {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.room-capacity {
-  color: #666;
-  margin-bottom: 0.5rem;
-}
-
-.amenities {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.amenity-tag {
-  background-color: #e9ecef;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  color: #495057;
-}
-
-/* Booking List */
-.booking-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.booking-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.booking-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.booking-room {
-  font-weight: 600;
-}
-
-.booking-time {
-  color: #666;
-}
-
-.booking-by {
-  font-size: 0.9rem;
-  color: #888;
-}
-
-/* Alerts */
-.alert {
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-.alert-success {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.alert-error {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.alert-warning {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeeba;
-}
-
-/* Loading States */
-.loading {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #666;
-}
-
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #e0e0e0;
-  border-top-color: #0066cc;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
   }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .container {
-    padding: 1rem;
+@layer base {
+  * {
+    @apply border-border;
   }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
 
-  nav {
-    flex-wrap: wrap;
-  }
+/* Glassmorphism Utilities */
+.glass {
+  @apply bg-white/5 backdrop-blur-lg border border-white/10;
+}
 
-  .booking-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
+.glass-card {
+  @apply bg-black/20 backdrop-blur-md border border-white/10 shadow-xl;
+}
+
+.glass-input {
+  @apply bg-black/20 border-white/10 focus:border-primary/50 placeholder:text-muted-foreground/50 transition-all duration-300;
+}
+
+.glass-button {
+  @apply bg-primary/90 hover:bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-300;
 }
