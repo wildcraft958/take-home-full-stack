@@ -77,25 +77,23 @@ Available Rooms:
 Today's Date: {today}
 
 Extraction Rules:
-1. Match room names flexibly (e.g., "board room" → "Board Room")
-2. Convert relative dates: "tomorrow" → actual date, "next Monday" → actual date
+1. Match room names flexibly (e.g., "board room" -> "Board Room")
+2. Convert relative dates: "tomorrow" -> actual date, "next Monday" -> actual date
 3. If duration given (e.g., "1 hour"), calculate end_time from start_time
 4. Default duration is 1 hour if not specified
 5. Set confidence to "low" if critical info (room, date, time) is missing
 6. Set clarification_needed with a question if you need more information
 
-Respond with ONLY valid JSON in this exact format:
-{{
-  "room_name": "Room Name or null",
-  "room_requirements": null,
-  "date": "YYYY-MM-DD or null",
-  "start_time": "HH:MM or null",
-  "end_time": "HH:MM or null",
-  "booked_by": "Name or null",
-  "title": "Meeting title or null",
-  "confidence": "high or medium or low",
-  "clarification_needed": "Question if info missing, else null"
-}}"""
+Respond with ONLY valid JSON. Example format:
+room_name: string or null
+room_requirements: object or null
+date: YYYY-MM-DD string or null
+start_time: HH:MM string or null
+end_time: HH:MM string or null
+booked_by: string or null
+title: string or null
+confidence: "high" or "medium" or "low"
+clarification_needed: string or null"""
 
     async def parse(self, text: str, rooms: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -108,25 +106,36 @@ Respond with ONLY valid JSON in this exact format:
         Returns:
             Extracted booking information as a dictionary.
         """
+        from langchain_core.messages import SystemMessage, HumanMessage
+        
         system_prompt = self._build_system_prompt(rooms)
-
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            ("user", "{input}")
-        ])
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=text)
+        ]
 
         try:
             if self.use_structured_output:
                 # OpenAI with structured output
                 structured_llm = self.llm.with_structured_output(BookingExtraction)
-                chain = prompt | structured_llm
-                result = await chain.ainvoke({"input": text})
-                return result.model_dump()
+                result = await structured_llm.ainvoke(messages)
+                return result.dict()
             else:
-                # Ollama with JSON parsing
-                chain = prompt | self.llm | self.json_parser
-                result = await chain.ainvoke({"input": text})
-                return result
+                # Ollama - invoke directly and parse JSON
+                response = await self.llm.ainvoke(messages)
+                content = response.content
+                
+                # Try to extract JSON from the response
+                try:
+                    return json.loads(content)
+                except json.JSONDecodeError:
+                    # Try to find JSON object in the response
+                    import re
+                    # Match nested JSON objects
+                    json_match = re.search(r'\{(?:[^{}]|\{[^{}]*\})*\}', content, re.DOTALL)
+                    if json_match:
+                        return json.loads(json_match.group())
+                    raise ValueError(f"Could not parse JSON from response: {content}")
                 
         except Exception as e:
             print(f"AI Parse Error: {e}")
@@ -138,7 +147,7 @@ Respond with ONLY valid JSON in this exact format:
                 "booked_by": None,
                 "title": None,
                 "confidence": "low",
-                "clarification_needed": f"Sorry, I couldn't process that request. Please try again or use the manual form.",
+                "clarification_needed": "Sorry, I couldn't process that request. Please try again or use the manual form.",
                 "raw_text": text,
                 "error": str(e)
             }
