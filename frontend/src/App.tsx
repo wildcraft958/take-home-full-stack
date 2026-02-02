@@ -61,12 +61,14 @@ export default function App() {
         )}
 
         {view === 'ai' && (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">AI Assistant</h2>
+          <div className="flex flex-col h-[calc(100vh-160px)]">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
+              <h2 className="text-xl font-semibold text-muted-foreground">AI Booking Assistant</h2>
               <Button variant="outline" size="sm" onClick={() => setView('manual')}>Switch to Manual</Button>
             </div>
-            <AIBookingChat onBookingSuccess={() => setView('history')} />
+            <div className="flex-1 min-h-0">
+              <AIBookingChat onBookingSuccess={() => setView('history')} />
+            </div>
           </div>
         )}
 

@@ -175,17 +175,17 @@ export function AIBookingChat({ onBookingSuccess }: AIBookingChatProps) {
     };
 
     return (
-        <Card className="glass-card border-white/10 max-w-2xl mx-auto">
-            <CardHeader className="border-b border-white/10">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
-                    AI Booking Assistant
+        <Card className="glass-card border-white/10 h-full flex flex-col">
+            <CardHeader className="border-b border-white/10 flex-shrink-0 py-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    Chat with BookingAI
                 </CardTitle>
             </CardHeader>
 
-            <CardContent className="p-0">
-                {/* Messages Area */}
-                <div className="h-[400px] overflow-y-auto p-4 space-y-4">
+            <CardContent className="p-0 flex flex-col flex-1 min-h-0">
+                {/* Messages Area - takes remaining space */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     <AnimatePresence initial={false}>
                         {messages.map((msg) => (
                             <motion.div

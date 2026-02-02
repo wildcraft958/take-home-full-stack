@@ -8,10 +8,13 @@ Supports both OpenAI/OpenRouter and Ollama as AI providers.
 import os
 import json
 import re
+import logging
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+
+logger = logging.getLogger(__name__)
 
 
 class AIBookingParser:
@@ -144,7 +147,7 @@ When ALL required info is collected, respond with booking_ready=true:
             return result
             
         except Exception as e:
-            print(f"AI Conversation Error: {e}")
+            logger.warning(f"AI Conversation Error: {e}")
             return {
                 "message": "I'm sorry, I had trouble understanding that. Could you rephrase your request?",
                 "booking_ready": False,

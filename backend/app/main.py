@@ -5,12 +5,15 @@ This is the entry point for the FastAPI application.
 Implement your routers and include them here.
 """
 
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.routers import rooms, bookings
 from app.database import engine, Base, SessionLocal
 from app.models import Room, Booking
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -32,7 +35,7 @@ async def lifespan(app: FastAPI):
             ]
             db.add_all(sample_rooms)
             db.commit()
-            print("✅ Seeded sample rooms")
+            logger.info("Seeded sample rooms")
     finally:
         db.close()
     

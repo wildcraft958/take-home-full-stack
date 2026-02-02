@@ -330,26 +330,39 @@ Good luck! 🚀
 ## Candidate Notes
 
 ### AI Provider Choice
-I chose **OpenAI / OpenRouter** (GPT-3.5-turbo equivalent) via **LangChain** for this implementation.
-- **Why LangChain**: It provides structured output parsing (`with_structured_output`), making extracting JSON from natural language robust and strongly typed (Pydantic).
-- **Why OpenRouter**: Easy access to powerful models without complex local setup, though the code supports switching to **Ollama** by changing the `AI_PROVIDER` environment variable.
+I chose **Ollama** (with `gemma3:1b` locally) and **LangChain** for this implementation.
+- **Why LangChain**: Abstracts away provider differences, making it easy to switch between OpenAI/OpenRouter and Ollama via environment variables.
+- **Why Ollama**: Free, local inference with no API costs. The code also supports OpenAI/OpenRouter by changing `AI_PROVIDER` env var.
 
 ### Prompt Engineering Approach
-I used a **System Prompt** injected with context:
-1.  **Context Injection**: The prompt receives the list of available rooms (name + capacity) and the current date/time.
-2.  **Structured Output**: Instead of asking for raw JSON text, I utilized LangChain's function calling/structured output capabilities to force the LLM to adhere to the `BookingExtraction` schema.
-3.  **Ambiguity Handling**: The prompt instructs the model to return `clarification_needed` if essential details (room, time) are missing, rather than guessing.
+I implemented a **multi-turn conversational agent** rather than single-shot parsing:
+
+1. **Context Injection**: The system prompt includes available rooms (name + capacity) and current date.
+2. **Conversation Flow Rules**: The AI follows a strict flow - ask about room, then date, then time - one question at a time.
+3. **Confirmation Gate**: The AI only sets `booking_ready=true` when ALL required fields (room, date, time) are collected AND the response doesn't contain a question.
+4. **Frontend Safeguard**: Even if the AI misbehaves, the frontend validates that required fields exist and no question mark is in the message before showing the confirmation card.
+
+### Key Features Implemented
+- ✅ **Multi-turn conversation** - Like modern AI agents (GPT, Claude)
+- ✅ **Natural language parsing** - "Book room for 5 people tomorrow at 2pm"
+- ✅ **Full-screen chat UI** - Modern GPT-like interface
+- ✅ **Landing page** - Professional entry with AI/Manual booking options
+- ✅ **Conflict detection** - Prevents double-booking
+- ✅ **Room seeding** - Auto-populates 5 sample rooms on startup
+- ✅ **Graceful fallback** - Returns user-friendly error on AI failure
 
 ### Assumptions
-- **Timezone**: The system assumes local server time for "tomorrow" or "today".
-- **Room Matching**: Fuzzy matching is delegated to the LLM. If the LLM returns a room name, we assume it matches one in the DB. (Ideally, we'd map this to ID in the backend, but currently, we rely on the name match or manual correction).
-- **Booking Duration**: Defaults to 1 hour if not specified.
+- **Timezone**: Assumes local server time for relative dates ("tomorrow", "next Monday").
+- **Room Matching**: The LLM matches user input to available room names (fuzzy matching delegated to AI).
+- **Default Duration**: 1 hour if not specified.
 
 ### Improvements (With More Time)
-1.  **Auth**: Implement user authentication (JWT) so `booked_by` is automatically populated.
-2.  **Room ID Resolution**: Enhance the AI service to return the `room_id` directly by doing a strict lookup in the backend before returning the response to the frontend.
-3.  **Recurring Bookings**: Add logic to handle "every Tuesday" requests.
-4.  **Tests**: Add comprehensive unit tests for the AI parser and integration tests for the API.
+1. **Auth**: JWT-based user authentication so `booked_by` is auto-populated.
+2. **Booking History**: Implement the history view with filtering.
+3. **Recurring Bookings**: Handle "every Tuesday at 2pm" requests.
+4. **Edit Bookings**: Allow modifying existing bookings with re-validation.
+5. **Unit Tests**: More comprehensive test coverage for edge cases.
 
 ### Time Spent
-Approximately 4 hours.
+Approximately 5-6 hours.
+
