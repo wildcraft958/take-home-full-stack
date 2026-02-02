@@ -1,17 +1,17 @@
 import { useState, useRef } from 'react';
-import { submitBooking, analyzeBookingRequest } from '@/api/client';
+import { analyzeBookingRequest } from '@/api/client';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 import { Send, Bot, Loader2, Sparkles, Check, X } from 'lucide-react';
-import { AIParseResponse, BookingCreate } from '@/types';
+import { AIParseResponse } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AIBookingChatProps {
     onBookingSuccess: () => void;
 }
 
-export function AIBookingChat({ onBookingSuccess }: AIBookingChatProps) {
+export function AIBookingChat({ }: AIBookingChatProps) {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [parsedData, setParsedData] = useState<AIParseResponse | null>(null);

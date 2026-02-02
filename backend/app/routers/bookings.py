@@ -10,7 +10,10 @@ from app.schemas.booking import BookingCreate, BookingRead
 from app.services.ai_parser import AIBookingParser
 
 router = APIRouter()
-ai_parser = AIBookingParser()
+
+def get_ai_parser():
+    """Lazy initialization of AI parser to avoid requiring API key at import time."""
+    return AIBookingParser()
 
 @router.get("/", response_model=List[BookingRead])
 def get_bookings(
@@ -100,5 +103,6 @@ async def analyze_booking_request(text: str, db: Session = Depends(get_database_
     room_context = [{"name": r.name, "capacity": r.capacity} for r in rooms]
     
     # Delegate to AI service
+    ai_parser = get_ai_parser()
     extraction_result = await ai_parser.parse(text, room_context)
     return extraction_result
