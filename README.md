@@ -60,7 +60,7 @@ The project is configured with hot-reloading:
 - Validate that end time is after start time
 - **Prevent double-booking:** Cannot book a room that's already reserved for overlapping times
 
-#### 3. 🤖 Natural Language Booking (AI Feature)
+#### 3. Natural Language Booking (AI Feature)
 - Users can type booking requests in natural language
 - Examples of inputs to support:
   - *"Book Conference Room A tomorrow from 2pm to 3pm for John"*
@@ -323,7 +323,7 @@ WHERE room_id = :room_id
 
 If you have questions about the requirements, please reach out to [HIRING_MANAGER_EMAIL]. Asking good questions is encouraged!
 
-Good luck! 🚀
+Good luck!
 
 ---
 
@@ -343,13 +343,22 @@ I implemented a **multi-turn conversational agent** rather than single-shot pars
 4. **Frontend Safeguard**: Even if the AI misbehaves, the frontend validates that required fields exist and no question mark is in the message before showing the confirmation card.
 
 ### Key Features Implemented
-- ✅ **Multi-turn conversation** - Like modern AI agents (GPT, Claude)
-- ✅ **Natural language parsing** - "Book room for 5 people tomorrow at 2pm"
-- ✅ **Full-screen chat UI** - Modern GPT-like interface
-- ✅ **Landing page** - Professional entry with AI/Manual booking options
-- ✅ **Conflict detection** - Prevents double-booking
-- ✅ **Room seeding** - Auto-populates 5 sample rooms on startup
-- ✅ **Graceful fallback** - Returns user-friendly error on AI failure
+
+#### Core Requirements
+-  **View Available Rooms** - Grid display with capacity and amenities
+-  **Create Booking (Form)** - Full form with client-side validation (end time > start time)
+-  **Natural Language Booking** - Multi-turn conversational AI agent
+-  **View Bookings** - History view with filtering by status AND room
+-  **Cancel Booking** - Delete with confirmation dialog
+-  **Conflict Detection** - Prevents double-booking with clear error messages
+
+#### Additional Features
+-  **Full-screen chat UI** - Modern GPT-like interface
+-  **Landing page** - Professional entry with AI/Manual booking options
+-  **Book from Room List** - Click room → pre-filled booking form
+-  **Room seeding** - Auto-populates 5 sample rooms on startup
+-  **Graceful fallback** - Returns user-friendly error on AI failure
+-  **Animated transitions** - Framer Motion for smooth UX
 
 ### Assumptions
 - **Timezone**: Assumes local server time for relative dates ("tomorrow", "next Monday").
@@ -358,11 +367,12 @@ I implemented a **multi-turn conversational agent** rather than single-shot pars
 
 ### Improvements (With More Time)
 1. **Auth**: JWT-based user authentication so `booked_by` is auto-populated.
-2. **Booking History**: Implement the history view with filtering.
-3. **Recurring Bookings**: Handle "every Tuesday at 2pm" requests.
-4. **Edit Bookings**: Allow modifying existing bookings with re-validation.
-5. **Unit Tests**: More comprehensive test coverage for edge cases.
+2. **Recurring Bookings**: Handle "every Tuesday at 2pm" requests.
+3. **Edit Bookings**: Allow modifying existing bookings with re-validation.
+4. **Unit Tests**: More comprehensive test coverage for AI parser edge cases.
+5. **Smart Room Suggestions**: AI recommends best room based on capacity requirements.
 
 ### Time Spent
-Approximately 5-6 hours.
+Approximately 3-4 hours.
+
 

@@ -124,7 +124,7 @@ export function AIBookingChat({ onBookingSuccess }: AIBookingChatProps) {
             const successMessage: Message = {
                 id: Date.now(),
                 role: 'assistant',
-                content: `✅ Your booking is confirmed! ${pendingBooking.room_name} is reserved for ${formatDate(pendingBooking.date!)} at ${formatTime(pendingBooking.start_time!)}.`
+                content: `Booking confirmed: ${pendingBooking.room_name} is reserved for ${formatDate(pendingBooking.date!)} at ${formatTime(pendingBooking.start_time!)}.`
             };
             setMessages(prev => [...prev, successMessage]);
             setPendingBooking(null);
@@ -137,7 +137,7 @@ export function AIBookingChat({ onBookingSuccess }: AIBookingChatProps) {
             const errorMessage: Message = {
                 id: Date.now(),
                 role: 'assistant',
-                content: `❌ Booking failed: ${error.response?.data?.detail || 'Please try again.'}`
+                content: `Booking failed: ${error.response?.data?.detail || 'Please try again.'}`
             };
             setMessages(prev => [...prev, errorMessage]);
         } finally {

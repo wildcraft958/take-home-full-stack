@@ -3,12 +3,12 @@ import { Room } from '@/types';
 import { fetchRooms } from '@/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Users, Wifi, Tv, Mic, Phone, Calendar } from 'lucide-react';
+import { Users, Wifi, Tv, Mic, Phone, Calendar, Presentation } from 'lucide-react';
 
 const amenityIcons: Record<string, React.ReactNode> = {
     'projector': <Tv size={16} />,
     'tv_screen': <Tv size={16} />,
-    'whiteboard': <span title="Whiteboard">⬜</span>,
+    'whiteboard': <Presentation size={16} />,
     'video_conferencing': <Wifi size={16} />,
     'phone_conferencing': <Phone size={16} />,
     'microphone': <Mic size={16} />,
