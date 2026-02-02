@@ -14,7 +14,12 @@ DATABASE_URL = os.getenv(
     "postgresql://booking_user:booking_pass@localhost:5432/booking_db"
 )
 
-engine = create_engine(DATABASE_URL)
+# SQLite requires special handling for async/threading
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

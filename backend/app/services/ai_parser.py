@@ -51,15 +51,16 @@ class AIBookingParser:
                 model=self.ollama_model,
                 base_url=self.ollama_base_url
             )
-            # Ollama doesn't support structured output, use JSON parser
-            self.use_structured_output = False
         else:
             self.llm = ChatOpenAI(
                 model=self.model_name,
                 api_key=self.api_key,
                 base_url=self.base_url
             )
-            self.use_structured_output = True
+        
+        # Note: with_structured_output requires newer langchain versions
+        # Using JSON parsing for all providers for compatibility
+        self.use_structured_output = False
 
         # JSON output parser for Ollama fallback
         self.json_parser = JsonOutputParser(pydantic_object=BookingExtraction)
