@@ -7,17 +7,44 @@ Implement your routers and include them here.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from app.routers import rooms, bookings
-from app.database import engine, Base
+from app.database import engine, Base, SessionLocal
 from app.models import Room, Booking
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database and seed data on startup."""
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
+    
+    # Seed sample rooms if empty
+    db = SessionLocal()
+    try:
+        if db.query(Room).count() == 0:
+            sample_rooms = [
+                Room(name="Conference Room A", capacity=10, amenities=["projector", "whiteboard", "video_conferencing"]),
+                Room(name="Board Room", capacity=20, amenities=["projector", "video_conferencing", "catering"]),
+                Room(name="Meeting Room 1", capacity=4, amenities=["whiteboard"]),
+                Room(name="Meeting Room 2", capacity=6, amenities=["projector", "whiteboard"]),
+                Room(name="Training Room", capacity=30, amenities=["projector", "microphone", "recording"]),
+            ]
+            db.add_all(sample_rooms)
+            db.commit()
+            print("✅ Seeded sample rooms")
+    finally:
+        db.close()
+    
+    yield  # App runs here
+    # Cleanup on shutdown (if needed)
+
 
 app = FastAPI(
     title="Room Booking API",
     description="API for managing meeting room bookings with AI-powered natural language support",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS configuration for frontend
@@ -54,3 +81,4 @@ def perform_health_check():
 # Include Routers
 app.include_router(rooms.router, prefix="/api/rooms", tags=["rooms"])
 app.include_router(bookings.router, prefix="/api/bookings", tags=["bookings"])
+

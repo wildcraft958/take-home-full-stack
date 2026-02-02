@@ -94,15 +94,65 @@ def cancel_booking(booking_id: int, db: Session = Depends(get_database_session))
 @router.post("/parse")
 async def analyze_booking_request(text: str, db: Session = Depends(get_database_session)):
     """
-    Analyze a natural language booking request using AI.
+    Analyze a natural language booking request using AI (legacy single-shot).
     
     Returns structured data that can be used to create a booking.
     """
     rooms = db.query(Room).all()
-    # Serialize room data for the AI context
     room_context = [{"name": r.name, "capacity": r.capacity} for r in rooms]
     
-    # Delegate to AI service
     ai_parser = get_ai_parser()
     extraction_result = await ai_parser.parse(text, room_context)
     return extraction_result
+
+
+from pydantic import BaseModel
+
+class ConversationMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+class ConversationRequest(BaseModel):
+    message: str
+    history: List[ConversationMessage] = []
+
+@router.post("/converse")
+async def converse_with_agent(
+    request: ConversationRequest, 
+    db: Session = Depends(get_database_session)
+):
+    """
+    Multi-turn conversational booking agent.
+    
+    Send a message along with conversation history to get an AI response
+    that either asks clarifying questions or confirms booking is ready.
+    
+    Returns:
+        {
+            "message": "AI's conversational response",
+            "booking_ready": true/false,
+            "booking_data": {...} when ready
+        }
+    """
+    rooms = db.query(Room).all()
+    room_context = [{"name": r.name, "capacity": r.capacity, "id": r.id} for r in rooms]
+    
+    # Convert history to dict format
+    history = [{"role": m.role, "content": m.content} for m in request.history]
+    
+    ai_parser = get_ai_parser()
+    result = await ai_parser.converse(request.message, history, room_context)
+    
+    # If booking is ready, try to resolve room ID
+    if result.get("booking_ready") and result.get("booking_data"):
+        booking_data = result["booking_data"]
+        room_name = booking_data.get("room_name")
+        if room_name:
+            # Find matching room
+            for r in room_context:
+                if r["name"].lower() == room_name.lower():
+                    booking_data["room_id"] = r["id"]
+                    break
+    
+    return result
+

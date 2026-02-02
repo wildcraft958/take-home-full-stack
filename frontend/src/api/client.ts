@@ -49,3 +49,40 @@ export const analyzeBookingRequest = async (text: string): Promise<AIParseRespon
   });
   return response.data;
 };
+
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ConversationResponse {
+  message: string;
+  booking_ready: boolean;
+  booking_data: {
+    room_name: string | null;
+    room_id?: number;
+    date: string | null;
+    start_time: string | null;
+    end_time: string | null;
+    title: string | null;
+    booked_by: string | null;
+  } | null;
+  error?: string;
+}
+
+/**
+ * Send a message to the conversational booking agent.
+ * @param message The user's message
+ * @param history Previous conversation messages
+ */
+export const converseWithAgent = async (
+  message: string,
+  history: ConversationMessage[]
+): Promise<ConversationResponse> => {
+  const response = await api.post('/bookings/converse', {
+    message,
+    history,
+  });
+  return response.data;
+};
+

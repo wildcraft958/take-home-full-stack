@@ -1,40 +1,27 @@
 """
-AI Booking Parser Service
+AI Booking Parser Service - Conversational Agent
 
-This module provides natural language parsing for booking requests using LangChain.
+This module provides a multi-turn conversational AI for room booking.
 Supports both OpenAI/OpenRouter and Ollama as AI providers.
 """
 
 import os
 import json
+import re
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.pydantic_v1 import BaseModel, Field  # Use LangChain's pydantic v1
-
-
-class BookingExtraction(BaseModel):
-    """Schema for extracted booking information."""
-    room_name: Optional[str] = Field(default=None, description="The exact room name if mentioned")
-    room_requirements: Optional[Dict[str, int]] = Field(default=None, description="Requirements like min_capacity")
-    date: Optional[str] = Field(default=None, description="Date in YYYY-MM-DD format")
-    start_time: Optional[str] = Field(default=None, description="Start time in HH:MM format")
-    end_time: Optional[str] = Field(default=None, description="End time in HH:MM format")
-    booked_by: Optional[str] = Field(default=None, description="Name of the person booking")
-    title: Optional[str] = Field(default=None, description="Title or purpose of the meeting")
-    confidence: str = Field(default="medium", description="high, medium, or low")
-    clarification_needed: Optional[str] = Field(default=None, description="Question to ask if info missing")
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 
 class AIBookingParser:
     """
-    Natural language parser for room booking requests.
+    Conversational AI agent for room booking.
     
-    Supports:
-    - OpenAI / OpenRouter (via OPENAI_API_KEY or OPENROUTER_API_KEY)
-    - Ollama (local models, set AI_PROVIDER=ollama)
+    Supports multi-turn conversations where the AI:
+    - Asks clarifying questions when information is missing
+    - Accumulates booking details across conversation turns
+    - Indicates when booking is ready for confirmation
     """
 
     def __init__(self):
@@ -57,98 +44,151 @@ class AIBookingParser:
                 api_key=self.api_key,
                 base_url=self.base_url
             )
-        
-        # Note: with_structured_output requires newer langchain versions
-        # Using JSON parsing for all providers for compatibility
-        self.use_structured_output = False
-
-        # JSON output parser for Ollama fallback
-        self.json_parser = JsonOutputParser(pydantic_object=BookingExtraction)
 
     def _build_system_prompt(self, rooms: List[Dict[str, Any]]) -> str:
-        """Construct the system prompt with room context."""
+        """Construct the system prompt for the conversational agent."""
         room_list = "\n".join([f"- {r['name']} (capacity: {r['capacity']})" for r in rooms])
         today = datetime.now().strftime("%Y-%m-%d (%A)")
 
-        return f"""You are a booking assistant. Extract meeting room booking details from user requests.
+        return f"""You are a friendly booking assistant helping users book meeting rooms through conversation.
 
 Available Rooms:
 {room_list}
 
 Today's Date: {today}
 
-Extraction Rules:
-1. Match room names flexibly (e.g., "board room" -> "Board Room")
-2. Convert relative dates: "tomorrow" -> actual date, "next Monday" -> actual date
-3. If duration given (e.g., "1 hour"), calculate end_time from start_time
-4. Default duration is 1 hour if not specified
-5. Set confidence to "low" if critical info (room, date, time) is missing
-6. Set clarification_needed with a question if you need more information
+CONVERSATION FLOW (follow this strictly):
+1. Greet user and understand their request
+2. Ask about ROOM preference if not specified (capacity needs, room name, etc.)
+3. Ask about DATE if not specified
+4. Ask about TIME if not specified
+5. Ask about meeting PURPOSE/TITLE (optional but nice to have)
+6. ONLY after collecting room, date, AND time, summarize and set booking_ready=true
 
-Respond with ONLY valid JSON. Example format:
-room_name: string or null
-room_requirements: object or null
-date: YYYY-MM-DD string or null
-start_time: HH:MM string or null
-end_time: HH:MM string or null
-booked_by: string or null
-title: string or null
-confidence: "high" or "medium" or "low"
-clarification_needed: string or null"""
+CRITICAL RULES:
+- Ask ONE question at a time
+- NEVER set booking_ready=true if you are asking a question in your message
+- NEVER set booking_ready=true until you have: room_name, date, AND start_time
+- If your message contains a question mark (?), booking_ready MUST be false
+- Be conversational and friendly
+- Convert relative dates (tomorrow, next Monday) to actual YYYY-MM-DD format
+- Default meeting duration is 1 hour
 
-    async def parse(self, text: str, rooms: List[Dict[str, Any]]) -> Dict[str, Any]:
+Required fields before booking_ready can be true:
+1. room_name - must match one of the available rooms
+2. date - in YYYY-MM-DD format
+3. start_time - in HH:MM format
+
+Respond with JSON:
+{{
+    "message": "Your friendly response (ask ONE question if info missing)",
+    "booking_ready": false,
+    "booking_data": {{
+        "room_name": "Exact room name from list, or null",
+        "date": "YYYY-MM-DD or null",
+        "start_time": "HH:MM or null",
+        "end_time": "HH:MM or null",
+        "title": "Meeting purpose or null",
+        "booked_by": "Person name or null"
+    }}
+}}
+
+When ALL required info is collected, respond with booking_ready=true:
+{{
+    "message": "Great! I have everything. Here's your booking summary: [room] on [date] at [time].",
+    "booking_ready": true,
+    "booking_data": {{ ... all fields filled ... }}
+}}"""
+
+    async def converse(
+        self, 
+        message: str, 
+        history: List[Dict[str, str]], 
+        rooms: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
-        Parse natural language text into structured booking data.
+        Process a conversation turn.
         
         Args:
-            text: The user's natural language booking request.
-            rooms: List of available rooms with name and capacity.
+            message: The user's latest message
+            history: Previous conversation turns [{"role": "user/assistant", "content": "..."}]
+            rooms: List of available rooms
             
         Returns:
-            Extracted booking information as a dictionary.
+            {
+                "message": "AI's response",
+                "booking_ready": bool,
+                "booking_data": {...} or None
+            }
         """
-        from langchain_core.messages import SystemMessage, HumanMessage
-        
         system_prompt = self._build_system_prompt(rooms)
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=text)
-        ]
+        
+        # Build message list from history
+        messages = [SystemMessage(content=system_prompt)]
+        
+        for turn in history:
+            if turn["role"] == "user":
+                messages.append(HumanMessage(content=turn["content"]))
+            else:
+                messages.append(AIMessage(content=turn["content"]))
+        
+        # Add current message
+        messages.append(HumanMessage(content=message))
 
         try:
-            if self.use_structured_output:
-                # OpenAI with structured output
-                structured_llm = self.llm.with_structured_output(BookingExtraction)
-                result = await structured_llm.ainvoke(messages)
-                return result.dict()
-            else:
-                # Ollama - invoke directly and parse JSON
-                response = await self.llm.ainvoke(messages)
-                content = response.content
-                
-                # Try to extract JSON from the response
-                try:
-                    return json.loads(content)
-                except json.JSONDecodeError:
-                    # Try to find JSON object in the response
-                    import re
-                    # Match nested JSON objects
-                    json_match = re.search(r'\{(?:[^{}]|\{[^{}]*\})*\}', content, re.DOTALL)
-                    if json_match:
-                        return json.loads(json_match.group())
-                    raise ValueError(f"Could not parse JSON from response: {content}")
-                
+            response = await self.llm.ainvoke(messages)
+            content = response.content
+            
+            # Parse JSON from response
+            result = self._parse_response(content)
+            return result
+            
         except Exception as e:
-            print(f"AI Parse Error: {e}")
+            print(f"AI Conversation Error: {e}")
             return {
-                "room_name": None,
-                "date": None,
-                "start_time": None,
-                "end_time": None,
-                "booked_by": None,
-                "title": None,
-                "confidence": "low",
-                "clarification_needed": "Sorry, I couldn't process that request. Please try again or use the manual form.",
-                "raw_text": text,
+                "message": "I'm sorry, I had trouble understanding that. Could you rephrase your request?",
+                "booking_ready": False,
+                "booking_data": None,
                 "error": str(e)
             }
+
+    def _parse_response(self, content: str) -> Dict[str, Any]:
+        """Extract structured data from AI response."""
+        try:
+            # Try direct JSON parse
+            return json.loads(content)
+        except json.JSONDecodeError:
+            pass
+        
+        # Try to find JSON in the response
+        json_match = re.search(r'\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}', content, re.DOTALL)
+        if json_match:
+            try:
+                return json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
+        
+        # Fallback: treat entire response as the message
+        return {
+            "message": content,
+            "booking_ready": False,
+            "booking_data": None
+        }
+
+    # Keep the old parse method for backward compatibility
+    async def parse(self, text: str, rooms: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Legacy single-shot parse method."""
+        result = await self.converse(text, [], rooms)
+        
+        # Convert to old format for compatibility
+        booking_data = result.get("booking_data") or {}
+        return {
+            "room_name": booking_data.get("room_name"),
+            "date": booking_data.get("date"),
+            "start_time": booking_data.get("start_time"),
+            "end_time": booking_data.get("end_time"),
+            "title": booking_data.get("title"),
+            "booked_by": booking_data.get("booked_by"),
+            "confidence": "high" if result.get("booking_ready") else "low",
+            "clarification_needed": result.get("message") if not result.get("booking_ready") else None
+        }

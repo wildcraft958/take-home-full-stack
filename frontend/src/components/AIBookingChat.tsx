@@ -1,156 +1,340 @@
-import { useState, useRef } from 'react';
-import { analyzeBookingRequest } from '@/api/client';
+import { useState, useRef, useEffect } from 'react';
+import { converseWithAgent, submitBooking, ConversationMessage, ConversationResponse } from '@/api/client';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Card, CardContent } from './ui/card';
-import { Send, Bot, Loader2, Sparkles, Check, X } from 'lucide-react';
-import { AIParseResponse } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Send, Bot, User, Loader2, Calendar, Clock, MapPin, Check, X, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+interface Message extends ConversationMessage {
+    id: number;
+}
+
+interface BookingData {
+    room_name: string | null;
+    room_id?: number;
+    date: string | null;
+    start_time: string | null;
+    end_time: string | null;
+    title: string | null;
+    booked_by: string | null;
+}
 
 interface AIBookingChatProps {
     onBookingSuccess: () => void;
 }
 
-export function AIBookingChat({ }: AIBookingChatProps) {
+export function AIBookingChat({ onBookingSuccess }: AIBookingChatProps) {
+    const [messages, setMessages] = useState<Message[]>([
+        {
+            id: 0,
+            role: 'assistant',
+            content: "Hi! I'm your booking assistant. Tell me what you need - like \"Book a room for 5 people tomorrow at 2pm\" and I'll help you set it up."
+        }
+    ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [parsedData, setParsedData] = useState<AIParseResponse | null>(null);
-    const [confirming, setConfirming] = useState(false);
+    const [pendingBooking, setPendingBooking] = useState<BookingData | null>(null);
+    const [bookingStatus, setBookingStatus] = useState<'idle' | 'confirming' | 'success' | 'error'>('idle');
+    const [bookerName, setBookerName] = useState('');
+
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const handleParse = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!input.trim()) return;
+    // Auto-scroll to bottom when new messages arrive
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
+    const sendMessage = async () => {
+        if (!input.trim() || loading) return;
+
+        const userMessage: Message = {
+            id: Date.now(),
+            role: 'user',
+            content: input.trim()
+        };
+
+        setMessages(prev => [...prev, userMessage]);
+        setInput('');
         setLoading(true);
-        setParsedData(null);
 
         try {
-            const result = await analyzeBookingRequest(input);
-            setParsedData(result);
+            // Build history for API (exclude the welcome message and current message)
+            const history: ConversationMessage[] = messages
+                .slice(1) // Skip welcome message
+                .map(m => ({ role: m.role, content: m.content }));
+
+            const response: ConversationResponse = await converseWithAgent(userMessage.content, history);
+
+            const aiMessage: Message = {
+                id: Date.now() + 1,
+                role: 'assistant',
+                content: response.message
+            };
+            setMessages(prev => [...prev, aiMessage]);
+
+            // Check if booking is ready - with extra validation
+            // Only show confirmation if:
+            // 1. AI says booking_ready is true
+            // 2. All required fields are present
+            // 3. AI message doesn't contain a question (safeguard)
+            const hasRequiredFields = response.booking_data &&
+                response.booking_data.room_name &&
+                response.booking_data.date &&
+                response.booking_data.start_time;
+
+            const isAskingQuestion = response.message.includes('?');
+
+            if (response.booking_ready && hasRequiredFields && !isAskingQuestion) {
+                setPendingBooking(response.booking_data);
+                setBookingStatus('confirming');
+            }
         } catch (error) {
-            console.error("AI Parse Error", error);
+            console.error('Conversation error:', error);
+            const errorMessage: Message = {
+                id: Date.now() + 1,
+                role: 'assistant',
+                content: "Sorry, I'm having trouble connecting. Please try again."
+            };
+            setMessages(prev => [...prev, errorMessage]);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleConfirm = async () => {
-        if (!parsedData) return;
-        setConfirming(true);
+    const handleConfirmBooking = async () => {
+        if (!pendingBooking || !pendingBooking.room_id) {
+            setBookingStatus('error');
+            return;
+        }
 
-        // We need to map AI response to BookingCreate. 
-        // Note: In a real app, we'd handle missing room_ids by looking up names or asking user. 
-        // For this demo, assume the AI (backend) could return a room_id or we match it here.
-        // Actually, the current AI parser returns 'room_name'. We need to match that to an ID or the backend should handle it.
-        // The current 'createBooking' needs a 'room_id'.
-        // Let's assume for this MVP that the user must verify the room in the manual form if name matching isn't perfect,
-        // OR the backend creates the booking by name. 
-        // Ideally, the Backend AI Parser should return the Room ID if it matched confidentally.
-        // Let's fix this gap: The frontend will look up the room ID from the list (we need room list context) or we ask the backend to handle it.
-        // EASIEST PATH: We passed the rooms to the LLM, but it returned the name. 
-        // Let's require the user to manually select the room if it's ambiguous, but better: 
-        // The backend `create_booking` endpoint expects `room_id`. 
-        // We really should have the AI return the matched `room_id` or we filter here.
-        // Just for now: we'll show a warning if room isn't found, but let's try to pass the data.
-
-        // HACK: We need a utility to find room ID by name. 
-        // Implementing a quick lookup here would require fetching rooms. 
-        // Let's assume the user edits the manual form if it fails, OR we fetch rooms here.
-        // Let's implement a "Refine in Form" feature if automatic confirmation isn't possible?
-        // Or simply:
-
+        setLoading(true);
         try {
-            // We need the room_id. Ideally the parsing response would contain it if we enhanced the backend.
-            // For now, let's just alert if we can't book directly.
-            alert("Please use the manual form to finalize (Room ID lookup missing in this step). \n\nDev Note: In a full implementation, I would map the room name '" + parsedData.room_name + "' to an ID here.");
-            // Real impl: fetch rooms, find id -> createBooking.
+            await submitBooking({
+                room_id: pendingBooking.room_id,
+                booking_date: pendingBooking.date!,
+                start_time: pendingBooking.start_time!,
+                end_time: pendingBooking.end_time || calculateEndTime(pendingBooking.start_time!),
+                title: pendingBooking.title || 'Meeting',
+                booked_by: bookerName || pendingBooking.booked_by || 'Anonymous'
+            });
 
-        } catch (error) {
-            console.error(error);
+            setBookingStatus('success');
+            const successMessage: Message = {
+                id: Date.now(),
+                role: 'assistant',
+                content: `✅ Your booking is confirmed! ${pendingBooking.room_name} is reserved for ${formatDate(pendingBooking.date!)} at ${formatTime(pendingBooking.start_time!)}.`
+            };
+            setMessages(prev => [...prev, successMessage]);
+            setPendingBooking(null);
+            onBookingSuccess();
+
+            // Reset after a moment
+            setTimeout(() => setBookingStatus('idle'), 2000);
+        } catch (error: any) {
+            setBookingStatus('error');
+            const errorMessage: Message = {
+                id: Date.now(),
+                role: 'assistant',
+                content: `❌ Booking failed: ${error.response?.data?.detail || 'Please try again.'}`
+            };
+            setMessages(prev => [...prev, errorMessage]);
         } finally {
-            setConfirming(false);
+            setLoading(false);
         }
     };
 
-    return (
-        <div className="w-full max-w-2xl mx-auto space-y-4">
-            <Card className="glass-card border-primary/20">
-                <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4 text-primary">
-                        <Sparkles className="w-5 h-5" />
-                        <h3 className="font-semibold text-lg">AI Booking Assistant</h3>
-                    </div>
+    const handleCancelBooking = () => {
+        setPendingBooking(null);
+        setBookingStatus('idle');
+        const cancelMessage: Message = {
+            id: Date.now(),
+            role: 'assistant',
+            content: "No problem! Let me know if you'd like to book something else."
+        };
+        setMessages(prev => [...prev, cancelMessage]);
+    };
 
-                    <form onSubmit={handleParse} className="relative">
+    const calculateEndTime = (startTime: string): string => {
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const endHours = (hours + 1) % 24;
+        return `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    };
+
+    const formatDate = (dateStr: string): string => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    };
+
+    const formatTime = (timeStr: string): string => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+    };
+
+    return (
+        <Card className="glass-card border-white/10 max-w-2xl mx-auto">
+            <CardHeader className="border-b border-white/10">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    AI Booking Assistant
+                </CardTitle>
+            </CardHeader>
+
+            <CardContent className="p-0">
+                {/* Messages Area */}
+                <div className="h-[400px] overflow-y-auto p-4 space-y-4">
+                    <AnimatePresence initial={false}>
+                        {messages.map((msg) => (
+                            <motion.div
+                                key={msg.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                            >
+                                {/* Avatar */}
+                                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.role === 'user'
+                                    ? 'bg-blue-500/20 text-blue-400'
+                                    : 'bg-purple-500/20 text-purple-400'
+                                    }`}>
+                                    {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                                </div>
+
+                                {/* Message Bubble */}
+                                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${msg.role === 'user'
+                                    ? 'bg-blue-500/20 text-blue-50 rounded-tr-sm'
+                                    : 'bg-white/5 text-gray-200 rounded-tl-sm'
+                                    }`}>
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+
+                    {/* Loading indicator */}
+                    {loading && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex gap-3"
+                        >
+                            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                <Bot className="w-4 h-4 text-purple-400" />
+                            </div>
+                            <div className="bg-white/5 rounded-2xl rounded-tl-sm px-4 py-3">
+                                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                            </div>
+                        </motion.div>
+                    )}
+
+                    <div ref={messagesEndRef} />
+                </div>
+
+                {/* Confirmation Card */}
+                <AnimatePresence>
+                    {bookingStatus === 'confirming' && pendingBooking && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            className="mx-4 mb-4"
+                        >
+                            <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Check className="w-5 h-5 text-green-400" />
+                                    <span className="font-medium text-green-300">Ready to Book!</span>
+                                </div>
+
+                                <div className="space-y-2 text-sm mb-4">
+                                    <div className="flex items-center gap-2 text-gray-300">
+                                        <MapPin className="w-4 h-4 text-gray-500" />
+                                        <span>{pendingBooking.room_name || 'Room TBD'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-300">
+                                        <Calendar className="w-4 h-4 text-gray-500" />
+                                        <span>{pendingBooking.date ? formatDate(pendingBooking.date) : 'Date TBD'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-300">
+                                        <Clock className="w-4 h-4 text-gray-500" />
+                                        <span>
+                                            {pendingBooking.start_time ? formatTime(pendingBooking.start_time) : 'Time TBD'}
+                                            {pendingBooking.end_time && ` - ${formatTime(pendingBooking.end_time)}`}
+                                        </span>
+                                    </div>
+                                    {pendingBooking.title && (
+                                        <div className="text-gray-400 italic">"{pendingBooking.title}"</div>
+                                    )}
+                                </div>
+
+                                {/* Booker name input */}
+                                <div className="mb-4">
+                                    <Input
+                                        placeholder="Your name (optional)"
+                                        value={bookerName}
+                                        onChange={(e) => setBookerName(e.target.value)}
+                                        className="bg-white/5 border-white/10 text-sm"
+                                    />
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleCancelBooking}
+                                        className="flex-1 border-white/20"
+                                    >
+                                        <X className="w-4 h-4 mr-1" />
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        onClick={handleConfirmBooking}
+                                        disabled={loading || !pendingBooking.room_id}
+                                        className="flex-1 bg-green-500 hover:bg-green-600"
+                                    >
+                                        {loading ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <Check className="w-4 h-4 mr-1" />
+                                                Confirm
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Input Area */}
+                <div className="border-t border-white/10 p-4">
+                    <form
+                        onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
+                        className="flex gap-2"
+                    >
                         <Input
                             ref={inputRef}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="e.g., 'Book the Board Room for 3 people tomorrow at 2pm'"
-                            className="pr-12 py-6 text-lg bg-background/50 backdrop-blur-sm border-primary/20 focus-visible:ring-primary/50"
-                            disabled={loading}
+                            placeholder="Type your message..."
+                            disabled={loading || bookingStatus === 'confirming'}
+                            className="flex-1 bg-white/5 border-white/10"
                         />
                         <Button
                             type="submit"
-                            size="icon"
-                            className="absolute right-1 top-1 h-10 w-10 glass-button"
-                            disabled={loading || !input.trim()}
+                            disabled={!input.trim() || loading || bookingStatus === 'confirming'}
+                            className="bg-purple-500 hover:bg-purple-600"
                         >
-                            {loading ? <Loader2 className="animate-spin" /> : <Send size={18} />}
+                            <Send className="w-4 h-4" />
                         </Button>
                     </form>
-                </CardContent>
-            </Card>
-
-            <AnimatePresence>
-                {parsedData && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                    >
-                        <Card className="bg-secondary/20 border-secondary">
-                            <CardContent className="p-4">
-                                <div className="flex gap-4">
-                                    <div className="mt-1 bg-primary/20 p-2 rounded-full h-fit">
-                                        <Bot size={20} className="text-primary" />
-                                    </div>
-                                    <div className="flex-1 space-y-2">
-                                        <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                                            Interpretation (Confidence: <span className={parsedData.confidence === 'high' ? 'text-green-500' : 'text-yellow-500'}>{parsedData.confidence}</span>)
-                                        </p>
-
-                                        {parsedData.clarification_needed ? (
-                                            <p className="text-destructive font-medium">{parsedData.clarification_needed}</p>
-                                        ) : (
-                                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                                <div><span className="text-muted-foreground">Room:</span> {parsedData.room_name || "Not specified"}</div>
-                                                <div><span className="text-muted-foreground">Date:</span> {parsedData.date}</div>
-                                                <div><span className="text-muted-foreground">Time:</span> {parsedData.start_time} - {parsedData.end_time}</div>
-                                                <div><span className="text-muted-foreground">For:</span> {parsedData.booked_by || "Unknown"}</div>
-                                            </div>
-                                        )}
-
-                                        <div className="flex gap-2 mt-4 pt-2 border-t border-border/50">
-                                            {!parsedData.clarification_needed && (
-                                                <Button size="sm" onClick={handleConfirm} disabled={confirming}>
-                                                    {confirming ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Check className="mr-2 h-4 w-4" />}
-                                                    Confirm & Book
-                                                </Button>
-                                            )}
-                                            <Button size="sm" variant="ghost" onClick={() => setParsedData(null)}>
-                                                <X className="mr-2 h-4 w-4" />
-                                                Cancel
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
+                </div>
+            </CardContent>
+        </Card>
     );
 }

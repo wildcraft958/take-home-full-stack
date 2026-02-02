@@ -2,76 +2,81 @@ import { useState } from 'react';
 import { AIBookingChat } from './components/AIBookingChat';
 import { BookingForm } from './components/BookingForm';
 import { RoomList } from './components/RoomList';
-import { Calendar, LayoutGrid, Plus, History } from 'lucide-react';
+import { LandingPage } from './components/LandingPage';
+import { Calendar, LayoutGrid, History, ChevronLeft } from 'lucide-react';
 import { Button } from './components/ui/button';
 
-// Note: I haven't created Tabs component yet, let me use simple state for navigation or create Tabs.
-// Let's implement a simple Tabs-like UI for now to save time or use Shadcn Tabs if I create them.
-// I'll create the Shadcn Tabs component next, it's standard.
-
 export default function App() {
-  const [view, setView] = useState<'rooms' | 'book' | 'history'>('book');
+  const [view, setView] = useState<'landing' | 'ai' | 'manual' | 'rooms' | 'history'>('landing');
+
+  const goToHome = () => setView('landing');
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans p-4 md:p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0a0a0a] to-black">
 
       {/* Header */}
-      <header className="max-w-6xl mx-auto mb-12 flex flex-col md:flex-row justify-between items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-500">
+      <header className={`max-w-6xl mx-auto mb-12 flex flex-col md:flex-row justify-between items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700 ${view === 'landing' ? 'mb-8' : ''}`}>
+        <div
+          onClick={goToHome}
+          className="cursor-pointer hover:opacity-80 transition-opacity"
+        >
+          <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-500">
             Booking<span className="text-foreground">AI</span>
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Intelligent Meeting Room Orchestration
-          </p>
         </div>
 
-        <div className="flex gap-2 bg-secondary/30 p-1 rounded-lg backdrop-blur-md border border-white/5">
-          <Button
-            variant={view === 'book' ? 'default' : 'ghost'}
-            onClick={() => setView('book')}
-            className="gap-2"
-          >
-            <Plus size={16} /> Book
-          </Button>
-          <Button
-            variant={view === 'rooms' ? 'default' : 'ghost'}
-            onClick={() => setView('rooms')}
-            className="gap-2"
-          >
-            <LayoutGrid size={16} /> Rooms
-          </Button>
-          <Button
-            variant={view === 'history' ? 'default' : 'ghost'}
-            onClick={() => setView('history')}
-            className="gap-2"
-          >
-            <History size={16} /> History
-          </Button>
-        </div>
+        {view !== 'landing' && (
+          <div className="flex gap-2 bg-secondary/30 p-1 rounded-lg backdrop-blur-md border border-white/5">
+            <Button
+              variant="ghost"
+              onClick={goToHome}
+              className="gap-2"
+            >
+              <ChevronLeft size={16} /> Home
+            </Button>
+            <div className="w-px bg-white/10 mx-1" />
+            <Button
+              variant={view === 'rooms' ? 'default' : 'ghost'}
+              onClick={() => setView('rooms')}
+              className="gap-2"
+            >
+              <LayoutGrid size={16} /> Rooms
+            </Button>
+            <Button
+              variant={view === 'history' ? 'default' : 'ghost'}
+              onClick={() => setView('history')}
+              className="gap-2"
+            >
+              <History size={16} /> History
+            </Button>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+      <main className="max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
 
-        {view === 'book' && (
-          <div className="space-y-8">
-            <section>
-              <AIBookingChat onBookingSuccess={() => setView('history')} />
-            </section>
+        {view === 'landing' && (
+          <LandingPage onNavigate={(v) => setView(v)} />
+        )}
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-muted" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or book manually</span>
-              </div>
+        {view === 'ai' && (
+          <div className="max-w-2xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">AI Assistant</h2>
+              <Button variant="outline" size="sm" onClick={() => setView('manual')}>Switch to Manual</Button>
             </div>
+            <AIBookingChat onBookingSuccess={() => setView('history')} />
+          </div>
+        )}
 
-            <section>
-              <BookingForm onBookingSuccess={() => setView('history')} />
-            </section>
+        {view === 'manual' && (
+          <div className="max-w-2xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Manual Booking</h2>
+              <Button variant="outline" size="sm" onClick={() => setView('ai')}>Switch to AI</Button>
+            </div>
+            <BookingForm onBookingSuccess={() => setView('history')} />
           </div>
         )}
 
@@ -84,6 +89,7 @@ export default function App() {
             <Calendar className="mx-auto h-12 w-12 opacity-20 mb-4" />
             <h3 className="text-lg font-medium">Coming Soon</h3>
             <p>Booking history and management module.</p>
+            <Button variant="outline" className="mt-4" onClick={goToHome}>Back to Home</Button>
           </div>
         )}
 
