@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Room } from '@/types';
 import { fetchRooms } from '@/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Users, Wifi, Tv, Mic, Phone } from 'lucide-react';
+import { Button } from './ui/button';
+import { Users, Wifi, Tv, Mic, Phone, Calendar } from 'lucide-react';
 
 const amenityIcons: Record<string, React.ReactNode> = {
     'projector': <Tv size={16} />,
@@ -14,7 +15,11 @@ const amenityIcons: Record<string, React.ReactNode> = {
     'phone': <Phone size={16} />,
 };
 
-export function RoomList() {
+interface RoomListProps {
+    onBookRoom?: (room: Room) => void;
+}
+
+export function RoomList({ onBookRoom }: RoomListProps) {
     const [rooms, setRooms] = useState<Room[]>([]);
 
     useEffect(() => {
@@ -33,7 +38,7 @@ export function RoomList() {
                             </span>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-3">
                         <div className="flex flex-wrap gap-2">
                             {room.amenities.map((amenity) => (
                                 <div key={amenity} className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded">
@@ -42,9 +47,20 @@ export function RoomList() {
                                 </div>
                             ))}
                         </div>
+                        {onBookRoom && (
+                            <Button
+                                onClick={() => onBookRoom(room)}
+                                className="w-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30"
+                                size="sm"
+                            >
+                                <Calendar className="w-4 h-4 mr-2" />
+                                Book This Room
+                            </Button>
+                        )}
                     </CardContent>
                 </Card>
             ))}
         </div>
     );
 }
+

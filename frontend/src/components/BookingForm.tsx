@@ -9,12 +9,13 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface BookingFormProps {
     onBookingSuccess: () => void;
+    preselectedRoom?: Room | null;
 }
 
-export function BookingForm({ onBookingSuccess }: BookingFormProps) {
+export function BookingForm({ onBookingSuccess, preselectedRoom }: BookingFormProps) {
     const [rooms, setRooms] = useState<Room[]>([]);
     const [formData, setFormData] = useState<BookingCreate>({
-        room_id: 1, // Default to first room
+        room_id: preselectedRoom?.id || 1,
         booked_by: '',
         booking_date: '',
         start_time: '',
@@ -28,6 +29,13 @@ export function BookingForm({ onBookingSuccess }: BookingFormProps) {
     useEffect(() => {
         fetchRooms().then(setRooms).catch(console.error);
     }, []);
+
+    // Update room_id when preselectedRoom changes
+    useEffect(() => {
+        if (preselectedRoom) {
+            setFormData(prev => ({ ...prev, room_id: preselectedRoom.id }));
+        }
+    }, [preselectedRoom]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

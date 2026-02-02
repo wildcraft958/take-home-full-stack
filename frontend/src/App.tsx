@@ -3,13 +3,26 @@ import { AIBookingChat } from './components/AIBookingChat';
 import { BookingForm } from './components/BookingForm';
 import { RoomList } from './components/RoomList';
 import { LandingPage } from './components/LandingPage';
-import { Calendar, LayoutGrid, History, ChevronLeft } from 'lucide-react';
+import { BookingHistory } from './components/BookingHistory';
+import { LayoutGrid, History, ChevronLeft } from 'lucide-react';
 import { Button } from './components/ui/button';
+import { Room } from './types';
 
 export default function App() {
   const [view, setView] = useState<'landing' | 'ai' | 'manual' | 'rooms' | 'history'>('landing');
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
   const goToHome = () => setView('landing');
+
+  const handleBookRoom = (room: Room) => {
+    setSelectedRoom(room);
+    setView('manual');
+  };
+
+  const handleBookingSuccess = () => {
+    setSelectedRoom(null);
+    setView('history');
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans p-4 md:p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0a0a0a] to-black">
@@ -67,7 +80,7 @@ export default function App() {
               <Button variant="outline" size="sm" onClick={() => setView('manual')}>Switch to Manual</Button>
             </div>
             <div className="flex-1 min-h-0">
-              <AIBookingChat onBookingSuccess={() => setView('history')} />
+              <AIBookingChat onBookingSuccess={handleBookingSuccess} />
             </div>
           </div>
         )}
@@ -78,20 +91,29 @@ export default function App() {
               <h2 className="text-2xl font-bold">Manual Booking</h2>
               <Button variant="outline" size="sm" onClick={() => setView('ai')}>Switch to AI</Button>
             </div>
-            <BookingForm onBookingSuccess={() => setView('history')} />
+            <BookingForm
+              onBookingSuccess={handleBookingSuccess}
+              preselectedRoom={selectedRoom}
+            />
           </div>
         )}
 
         {view === 'rooms' && (
-          <RoomList />
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Available Rooms</h2>
+            </div>
+            <RoomList onBookRoom={handleBookRoom} />
+          </div>
         )}
 
         {view === 'history' && (
-          <div className="text-center py-20 text-muted-foreground">
-            <Calendar className="mx-auto h-12 w-12 opacity-20 mb-4" />
-            <h3 className="text-lg font-medium">Coming Soon</h3>
-            <p>Booking history and management module.</p>
-            <Button variant="outline" className="mt-4" onClick={goToHome}>Back to Home</Button>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Booking History</h2>
+              <Button variant="outline" onClick={() => setView('ai')}>New Booking</Button>
+            </div>
+            <BookingHistory onBookNow={() => setView('ai')} />
           </div>
         )}
 
@@ -100,3 +122,4 @@ export default function App() {
     </div>
   )
 }
+
