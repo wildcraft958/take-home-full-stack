@@ -20,17 +20,15 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-def get_db():
+def get_database_session():
     """
-    Dependency function that provides a database session.
-
-    Usage:
-        @app.get("/items")
-        def get_items(db: Session = Depends(get_db)):
-            ...
+    Dependency to provide a database session for a request context.
+    
+    Yields:
+        Session: A standard SQLAlchemy database session.
     """
-    db = SessionLocal()
+    session = SessionLocal()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        session.close()

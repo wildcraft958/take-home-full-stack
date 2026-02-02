@@ -31,14 +31,24 @@ app.add_middleware(
 
 
 @app.get("/")
-def root():
-    """Health check endpoint"""
+def check_api_status():
+    """
+    Root endpoint to verify API availability.
+    
+    Returns:
+        dict: Status message confirming the API is running.
+    """
     return {"status": "ok", "message": "Room Booking API is running"}
 
 
 @app.get("/health")
-def health_check():
-    """Health check for Docker"""
+def perform_health_check():
+    """
+    Health check endpoint for container orchestration.
+    
+    Returns:
+        dict: Health status.
+    """
     return {"status": "healthy"}
 
 # Include Routers

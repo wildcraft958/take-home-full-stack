@@ -1,14 +1,14 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.database import get_database_session
 from app.models.room import Room
 from app.schemas.room import RoomRead
 
 router = APIRouter()
 
 @router.get("/", response_model=List[RoomRead])
-def list_available_rooms(db: Session = Depends(get_db)):
+def list_available_rooms(db: Session = Depends(get_database_session)):
     """
     Retrieve a list of all available meeting rooms.
     
@@ -19,7 +19,7 @@ def list_available_rooms(db: Session = Depends(get_db)):
     return rooms
 
 @router.get("/{room_id}", response_model=RoomRead)
-def retrieve_room_details(room_id: int, db: Session = Depends(get_db)):
+def retrieve_room_details(room_id: int, db: Session = Depends(get_database_session)):
     """
     Retrieve detailed information for a specific room.
     

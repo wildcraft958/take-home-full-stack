@@ -324,3 +324,32 @@ WHERE room_id = :room_id
 If you have questions about the requirements, please reach out to [HIRING_MANAGER_EMAIL]. Asking good questions is encouraged!
 
 Good luck! 🚀
+
+---
+
+## Candidate Notes
+
+### AI Provider Choice
+I chose **OpenAI / OpenRouter** (GPT-3.5-turbo equivalent) via **LangChain** for this implementation.
+- **Why LangChain**: It provides structured output parsing (`with_structured_output`), making extracting JSON from natural language robust and strongly typed (Pydantic).
+- **Why OpenRouter**: Easy access to powerful models without complex local setup, though the code supports switching to **Ollama** by changing the `AI_PROVIDER` environment variable.
+
+### Prompt Engineering Approach
+I used a **System Prompt** injected with context:
+1.  **Context Injection**: The prompt receives the list of available rooms (name + capacity) and the current date/time.
+2.  **Structured Output**: Instead of asking for raw JSON text, I utilized LangChain's function calling/structured output capabilities to force the LLM to adhere to the `BookingExtraction` schema.
+3.  **Ambiguity Handling**: The prompt instructs the model to return `clarification_needed` if essential details (room, time) are missing, rather than guessing.
+
+### Assumptions
+- **Timezone**: The system assumes local server time for "tomorrow" or "today".
+- **Room Matching**: Fuzzy matching is delegated to the LLM. If the LLM returns a room name, we assume it matches one in the DB. (Ideally, we'd map this to ID in the backend, but currently, we rely on the name match or manual correction).
+- **Booking Duration**: Defaults to 1 hour if not specified.
+
+### Improvements (With More Time)
+1.  **Auth**: Implement user authentication (JWT) so `booked_by` is automatically populated.
+2.  **Room ID Resolution**: Enhance the AI service to return the `room_id` directly by doing a strict lookup in the backend before returning the response to the frontend.
+3.  **Recurring Bookings**: Add logic to handle "every Tuesday" requests.
+4.  **Tests**: Add comprehensive unit tests for the AI parser and integration tests for the API.
+
+### Time Spent
+Approximately 4 hours.

@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
-from app.database import get_db
+from app.database import get_database_session
 from app.models.booking import Booking
 from app.models.room import Room
 from app.schemas.booking import BookingCreate, BookingRead
@@ -16,7 +16,7 @@ ai_parser = AIBookingParser()
 def get_bookings(
     room_id: Optional[int] = None,
     booking_date: Optional[date] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_database_session)
 ):
     """
     List bookings with optional filters.
@@ -40,7 +40,7 @@ def get_bookings(
     return result
 
 @router.post("/", response_model=BookingRead)
-def create_booking(booking: BookingCreate, db: Session = Depends(get_db)):
+def create_booking(booking: BookingCreate, db: Session = Depends(get_database_session)):
     """
     Create a new booking with conflict detection.
     """
@@ -76,7 +76,7 @@ def create_booking(booking: BookingCreate, db: Session = Depends(get_db)):
     return response
 
 @router.delete("/{booking_id}")
-def cancel_booking(booking_id: int, db: Session = Depends(get_db)):
+def cancel_booking(booking_id: int, db: Session = Depends(get_database_session)):
     """
     Cancel an existing booking.
     """
@@ -89,7 +89,7 @@ def cancel_booking(booking_id: int, db: Session = Depends(get_db)):
     return {"message": "Booking cancelled successfully"}
 
 @router.post("/parse")
-async def analyze_booking_request(text: str, db: Session = Depends(get_db)):
+async def analyze_booking_request(text: str, db: Session = Depends(get_database_session)):
     """
     Analyze a natural language booking request using AI.
     

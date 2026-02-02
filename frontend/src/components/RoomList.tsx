@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Room } from '@/types';
-import { getRooms } from '@/api/client';
+import { fetchRooms } from '@/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Users, Wifi, Tv, Mic, Phone } from 'lucide-react';
 
@@ -18,7 +18,7 @@ export function RoomList() {
     const [rooms, setRooms] = useState<Room[]>([]);
 
     useEffect(() => {
-        getRooms().then(setRooms).catch(console.error);
+        fetchRooms().then(setRooms).catch(console.error);
     }, []);
 
     return (

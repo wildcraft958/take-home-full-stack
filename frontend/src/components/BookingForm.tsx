@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { createBooking, getRooms } from '@/api/client';
+import { submitBooking, fetchRooms } from '@/api/client';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface BookingFormProps {
@@ -26,7 +26,7 @@ export function BookingForm({ onBookingSuccess }: BookingFormProps) {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        getRooms().then(setRooms).catch(console.error);
+        fetchRooms().then(setRooms).catch(console.error);
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -36,7 +36,7 @@ export function BookingForm({ onBookingSuccess }: BookingFormProps) {
         setLoading(true);
 
         try {
-            await createBooking({
+            await submitBooking({
                 ...formData,
                 room_id: Number(formData.room_id)
             });

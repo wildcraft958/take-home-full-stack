@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { createBooking, analyzeBookingRequest } from '@/api/client';
+import { submitBooking, analyzeBookingRequest } from '@/api/client';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
