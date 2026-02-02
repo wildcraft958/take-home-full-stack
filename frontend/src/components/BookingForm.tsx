@@ -41,6 +41,13 @@ export function BookingForm({ onBookingSuccess, preselectedRoom }: BookingFormPr
         e.preventDefault();
         setError(null);
         setSuccess(false);
+
+        // Client-side validation: end time must be after start time
+        if (formData.start_time >= formData.end_time) {
+            setError('End time must be after start time');
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -49,7 +56,7 @@ export function BookingForm({ onBookingSuccess, preselectedRoom }: BookingFormPr
                 room_id: Number(formData.room_id)
             });
             setSuccess(true);
-            setFormData({ ...formData, title: '', start_time: '', end_time: '' }); // Clear some fields
+            setFormData({ ...formData, title: '', start_time: '', end_time: '' });
             onBookingSuccess();
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Failed to create booking');

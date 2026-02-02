@@ -14,6 +14,7 @@ export function BookingHistory({ onBookNow }: BookingHistoryProps) {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
+    const [roomFilter, setRoomFilter] = useState<string>('');
     const [deletingId, setDeletingId] = useState<number | null>(null);
 
     const loadBookings = async () => {
@@ -64,10 +65,19 @@ export function BookingHistory({ onBookNow }: BookingHistoryProps) {
         return bookingDateTime > new Date();
     };
 
+    // Get unique room names for filter dropdown
+    const uniqueRooms = Array.from(new Set(bookings.map(b => b.room_name).filter(Boolean))) as string[];
+
     const filteredBookings = bookings.filter(booking => {
-        if (filter === 'all') return true;
-        const upcoming = isUpcoming(booking.booking_date, booking.start_time);
-        return filter === 'upcoming' ? upcoming : !upcoming;
+        // Time filter
+        if (filter !== 'all') {
+            const upcoming = isUpcoming(booking.booking_date, booking.start_time);
+            if (filter === 'upcoming' && !upcoming) return false;
+            if (filter === 'past' && upcoming) return false;
+        }
+        // Room filter
+        if (roomFilter && booking.room_name !== roomFilter) return false;
+        return true;
     });
 
     if (loading) {
@@ -95,26 +105,43 @@ export function BookingHistory({ onBookNow }: BookingHistoryProps) {
 
     return (
         <div className="space-y-6">
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-4">
+            {/* Filter Section */}
+            <div className="flex flex-wrap items-center gap-4">
+                {/* Time Filter */}
                 <div className="flex items-center gap-2 text-muted-foreground">
                     <Filter className="w-4 h-4" />
-                    <span className="text-sm font-medium">Filter:</span>
+                    <span className="text-sm font-medium">Status:</span>
                 </div>
-                <div className="flex gap-2 bg-secondary/30 p-1 rounded-lg">
+                <div className="flex gap-1 bg-secondary/30 p-1 rounded-lg">
                     {(['upcoming', 'past', 'all'] as const).map((f) => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
-                            className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${filter === f
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'hover:bg-white/5 text-muted-foreground'
+                            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${filter === f
+                                ? 'bg-primary text-primary-foreground'
+                                : 'hover:bg-white/5 text-muted-foreground'
                                 }`}
                         >
                             {f.charAt(0).toUpperCase() + f.slice(1)}
                         </button>
                     ))}
                 </div>
+
+                {/* Room Filter */}
+                <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <select
+                        value={roomFilter}
+                        onChange={(e) => setRoomFilter(e.target.value)}
+                        className="bg-secondary/30 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                        <option value="">All Rooms</option>
+                        {uniqueRooms.map(room => (
+                            <option key={room} value={room}>{room}</option>
+                        ))}
+                    </select>
+                </div>
+
                 <span className="text-sm text-muted-foreground ml-auto">
                     {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
                 </span>
