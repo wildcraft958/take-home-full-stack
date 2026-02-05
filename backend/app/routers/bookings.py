@@ -15,7 +15,7 @@ def get_ai_parser():
     """Lazy initialization of AI parser to avoid requiring API key at import time."""
     return AIBookingParser()
 
-@router.get("/", response_model=List[BookingRead])
+@router.get("", response_model=List[BookingRead])
 def get_bookings(
     room_id: Optional[int] = None,
     booking_date: Optional[date] = None,
@@ -42,7 +42,7 @@ def get_bookings(
         
     return result
 
-@router.post("/", response_model=BookingRead)
+@router.post("", response_model=BookingRead)
 def create_booking(booking: BookingCreate, db: Session = Depends(get_database_session)):
     """
     Create a new booking with conflict detection.

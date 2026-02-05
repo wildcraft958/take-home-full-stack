@@ -7,7 +7,7 @@ from app.schemas.room import RoomRead
 
 router = APIRouter()
 
-@router.get("/", response_model=List[RoomRead])
+@router.get("", response_model=List[RoomRead])
 def list_available_rooms(db: Session = Depends(get_database_session)):
     """
     Retrieve a list of all available meeting rooms.
