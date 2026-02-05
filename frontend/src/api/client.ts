@@ -2,7 +2,13 @@ import axios from 'axios';
 import { Room, Booking, BookingCreate, AIParseResponse } from '../types';
 
 const getApiUrl = () => {
-  const url = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  let url = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+  // Force HTTPS for Railway production
+  if (url.includes('railway.app') && url.startsWith('http://')) {
+    url = url.replace('http://', 'https://');
+  }
+
   return url.endsWith('/api') ? url : `${url}/api`;
 };
 
