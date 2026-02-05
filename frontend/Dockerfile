@@ -1,16 +1,24 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Install dependencies
-COPY package.json .
-RUN npm install
+COPY package*.json ./
+RUN npm ci
 
 # Copy source files
 COPY . .
 
-# Expose Vite dev server port
-EXPOSE 5173
+# Build with env var (Railway passes this at build time)
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build
 
-# Start development server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Production stage - serve with a simple static server
+FROM node:20-alpine
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 5173
+CMD ["serve", "-s", "dist", "-l", "5173"]

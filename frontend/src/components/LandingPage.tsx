@@ -12,7 +12,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             {/* Navbar */}
             <nav className="flex items-center justify-between py-4 px-6 mb-8">
                 <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-                    RoomBook AI
+                    BookingAI
                 </div>
                 <div className="flex items-center gap-6">
                     <button
