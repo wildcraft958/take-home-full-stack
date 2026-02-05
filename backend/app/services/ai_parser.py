@@ -144,7 +144,14 @@ When ALL required info is collected, respond with booking_ready=true:
         system_prompt = self._build_system_prompt(rooms)
         
         # Build message list from history
-        messages = [SystemMessage(content=system_prompt)]
+        messages = []
+        
+        # Some models (like Google Gemma on OpenRouter) don't support SystemMessage
+        # We merge system prompt into the first user message for these cases
+        is_google_openrouter = (self.provider == "openrouter" and "google/" in self.model_name.lower())
+        
+        if not is_google_openrouter:
+            messages.append(SystemMessage(content=system_prompt))
         
         for turn in history:
             if turn["role"] == "user":
@@ -154,6 +161,13 @@ When ALL required info is collected, respond with booking_ready=true:
         
         # Add current message
         messages.append(HumanMessage(content=message))
+
+        # If we couldn't use SystemMessage, prepend it to the first HumanMessage
+        if is_google_openrouter:
+            for msg in messages:
+                if isinstance(msg, HumanMessage):
+                    msg.content = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\nUSER REQUEST:\n{msg.content}"
+                    break
 
         try:
             response = await self.llm.ainvoke(messages)
