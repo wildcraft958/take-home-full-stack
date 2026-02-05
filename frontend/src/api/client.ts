@@ -13,6 +13,7 @@ const getApiUrl = () => {
 };
 
 const API_URL = getApiUrl();
+console.log('🔌 API URL configured as:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
