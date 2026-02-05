@@ -27,13 +27,15 @@ services:
     environment:
       DATABASE_URL: postgresql://booking_user:booking_pass@database:5432/booking_db
       PYTHONUNBUFFERED: 1
-      # AI Provider Configuration
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # AI Provider Configuration (openrouter, openai, or ollama)
+      AI_PROVIDER: ${AI_PROVIDER:-openrouter}
+      AI_MODEL: ${AI_MODEL:-qwen/qwen3-4b:free}
+      # OpenRouter
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
-      AI_PROVIDER: ${AI_PROVIDER:-openai}
-      AI_MODEL: ${AI_MODEL:-openai/gpt-3.5-turbo}
-      # Ollama configuration (use host.docker.internal for local Ollama)
+      # OpenAI (if using AI_PROVIDER=openai)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      # Ollama (if using AI_PROVIDER=ollama)
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:1b}
     ports:

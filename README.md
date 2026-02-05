@@ -356,7 +356,7 @@ I implemented a **multi-turn conversational agent** rather than single-shot pars
 -  **Full-screen chat UI** - Modern GPT-like interface
 -  **Landing page** - Professional entry with AI/Manual booking options
 -  **Book from Room List** - Click room → pre-filled booking form
--  **Room seeding** - Auto-populates 5 sample rooms on startup
+-  **Room & Booking seeding** - Auto-populates sample rooms AND bookings on startup
 -  **Graceful fallback** - Returns user-friendly error on AI failure
 -  **Animated transitions** - Framer Motion for smooth UX
 
@@ -375,4 +375,19 @@ I implemented a **multi-turn conversational agent** rather than single-shot pars
 ### Time Spent
 Approximately 3-4 hours.
 
+---
+
+## Deployment
+
+See [DEPLOY.md](./DEPLOY.md) for Railway deployment instructions.
+
+### Quick Start (Railway)
+```bash
+npm install -g @railway/cli
+railway login
+railway init
+railway add --plugin postgresql
+cd backend && railway up
+cd ../frontend && railway up
+```
 

@@ -25,13 +25,18 @@ class AIBookingParser:
     - Asks clarifying questions when information is missing
     - Accumulates booking details across conversation turns
     - Indicates when booking is ready for confirmation
+    
+    Supported AI_PROVIDER values:
+    - 'openrouter': Uses OpenRouter API (default)
+    - 'openai': Uses OpenAI API directly
+    - 'ollama': Uses local Ollama instance
     """
 
     def __init__(self):
-        self.provider = os.getenv("AI_PROVIDER", "openai")
-        self.api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
-        self.base_url = os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
-        self.model_name = os.getenv("AI_MODEL", "openai/gpt-3.5-turbo")
+        self.provider = os.getenv("AI_PROVIDER", "openrouter").lower()
+        self.model_name = os.getenv("AI_MODEL", "qwen/qwen3-4b:free")
+        
+        # Ollama configuration
         self.ollama_model = os.getenv("OLLAMA_MODEL", "gemma3:1b")
         self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
@@ -41,12 +46,24 @@ class AIBookingParser:
                 model=self.ollama_model,
                 base_url=self.ollama_base_url
             )
-        else:
+        elif self.provider == "openrouter":
+            # OpenRouter uses OpenAI-compatible API
+            api_key = os.getenv("OPENROUTER_API_KEY")
             self.llm = ChatOpenAI(
                 model=self.model_name,
-                api_key=self.api_key,
-                base_url=self.base_url
+                api_key=api_key,
+                base_url="https://openrouter.ai/api/v1"
             )
+        else:
+            # Default: OpenAI direct
+            api_key = os.getenv("OPENAI_API_KEY")
+            base_url = os.getenv("OPENAI_BASE_URL")  # Optional custom endpoint
+            self.llm = ChatOpenAI(
+                model=self.model_name,
+                api_key=api_key,
+                base_url=base_url
+            )
+
 
     def _build_system_prompt(self, rooms: List[Dict[str, Any]]) -> str:
         """Construct the system prompt for the conversational agent."""
