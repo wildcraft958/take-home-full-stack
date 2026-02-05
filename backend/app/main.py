@@ -6,6 +6,7 @@ Implement your routers and include them here.
 """
 
 import logging
+from datetime import date, time, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -36,6 +37,36 @@ async def lifespan(app: FastAPI):
             db.add_all(sample_rooms)
             db.commit()
             logger.info("Seeded sample rooms")
+        
+        # Seed sample bookings if empty (for demo purposes)
+        if db.query(Booking).count() == 0:
+            today = date.today()
+            tomorrow = today + timedelta(days=1)
+            next_week = today + timedelta(days=7)
+            
+            # Get room references
+            conf_a = db.query(Room).filter(Room.name == "Conference Room A").first()
+            board = db.query(Room).filter(Room.name == "Board Room").first()
+            meeting1 = db.query(Room).filter(Room.name == "Meeting Room 1").first()
+            meeting2 = db.query(Room).filter(Room.name == "Meeting Room 2").first()
+            training = db.query(Room).filter(Room.name == "Training Room").first()
+            
+            if conf_a and board and meeting1:
+                sample_bookings = [
+                    Booking(room_id=conf_a.id, title="Team Standup", booked_by="alice@example.com",
+                            booking_date=tomorrow, start_time=time(9, 0), end_time=time(9, 30)),
+                    Booking(room_id=conf_a.id, title="Project Review", booked_by="bob@example.com",
+                            booking_date=tomorrow, start_time=time(14, 0), end_time=time(15, 0)),
+                    Booking(room_id=board.id, title="Quarterly Planning", booked_by="carol@example.com",
+                            booking_date=tomorrow, start_time=time(10, 0), end_time=time(12, 0)),
+                    Booking(room_id=meeting1.id, title="1:1 with Manager", booked_by="dave@example.com",
+                            booking_date=tomorrow, start_time=time(15, 30), end_time=time(16, 0)),
+                    Booking(room_id=board.id, title="Board Meeting", booked_by="eve@example.com",
+                            booking_date=next_week, start_time=time(9, 0), end_time=time(12, 0)),
+                ]
+                db.add_all(sample_bookings)
+                db.commit()
+                logger.info("Seeded sample bookings")
     finally:
         db.close()
     
