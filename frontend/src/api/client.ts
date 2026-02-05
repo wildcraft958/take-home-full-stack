@@ -1,7 +1,12 @@
 import axios from 'axios';
 import { Room, Booking, BookingCreate, AIParseResponse } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const getApiUrl = () => {
+  const url = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  return url.endsWith('/api') ? url : `${url}/api`;
+};
+
+const API_URL = getApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,
