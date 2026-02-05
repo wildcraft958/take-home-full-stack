@@ -70,54 +70,38 @@ class AIBookingParser:
         room_list = "\n".join([f"- {r['name']} (capacity: {r['capacity']})" for r in rooms])
         today = datetime.now().strftime("%Y-%m-%d (%A)")
 
-        return f"""You are a friendly booking assistant helping users book meeting rooms through conversation.
+        return f"""You are a smart booking assistant. Your goal is to book a meeting room as EFFICIENTLY as possible.
 
 Available Rooms:
 {room_list}
 
 Today's Date: {today}
 
-CONVERSATION FLOW (follow this strictly):
-1. Greet user and understand their request
-2. Ask about ROOM preference if not specified (capacity needs, room name, etc.)
-3. Ask about DATE if not specified
-4. Ask about TIME if not specified
-5. Ask about meeting PURPOSE/TITLE (optional but nice to have)
-6. ONLY after collecting room, date, AND time, summarize and set booking_ready=true
+INSTRUCTIONS:
+1. ANALYZE the user's message and the conversation history.
+2. EXTRACT every piece of information provided (Room, Date, Time, Capacity).
+3. IF user specifies a relative date (e.g., "tomorrow"), CALCULATE the actual YYYY-MM-DD.
+4. IF user says "any room" or doesn't care, PICK the best room based on capacity (or random if not specified). DO NOT ask which room if they said "any".
+5. DO NOT ask for information that has already been provided.
 
 CRITICAL RULES:
-- Ask ONE question at a time
-- NEVER set booking_ready=true if you are asking a question in your message
-- NEVER set booking_ready=true until you have: room_name, date, AND start_time
-- If your message contains a question mark (?), booking_ready MUST be false
-- Be conversational and friendly
-- Convert relative dates (tomorrow, next Monday) to actual YYYY-MM-DD format
-- Default meeting duration is 1 hour
+- If user provides ALL needed info (Room/Capacity, Date, Time), set booking_ready=true IMMEDIATELY.
+- If user needs a room for X people, auto-select a room that fits.
+- If multiple inputs are given, accept them all at once.
+- Default duration is 1 hour if not specified.
 
-Required fields before booking_ready can be true:
-1. room_name - must match one of the available rooms
-2. date - in YYYY-MM-DD format
-3. start_time - in HH:MM format
-
-Respond with JSON:
+Required Final Output (JSON):
 {{
-    "message": "Your friendly response (ask ONE question if info missing)",
-    "booking_ready": false,
+    "message": "Response text. If booking ready, summarize: 'Booking [Room] for [Date] at [Time]'. If missing info, ask for it.",
+    "booking_ready": boolean,
     "booking_data": {{
-        "room_name": "Exact room name from list, or null",
-        "date": "YYYY-MM-DD or null",
-        "start_time": "HH:MM or null",
-        "end_time": "HH:MM or null",
-        "title": "Meeting purpose or null",
-        "booked_by": "Person name or null"
+        "room_name": "Selected Room Name (REQUIRED for true)",
+        "date": "YYYY-MM-DD (REQUIRED for true)",
+        "start_time": "HH:MM (REQUIRED for true)",
+        "end_time": "HH:MM",
+        "title": "Topic",
+        "booked_by": "Name"
     }}
-}}
-
-When ALL required info is collected, respond with booking_ready=true:
-{{
-    "message": "Great! I have everything. Here's your booking summary: [room] on [date] at [time].",
-    "booking_ready": true,
-    "booking_data": {{ ... all fields filled ... }}
 }}"""
 
     async def converse(
